@@ -241,6 +241,40 @@ decisions, design changes, implementation milestones, or verification results.
   scoped review was clean; fresh controller checks passed 15 topology tests
   and 32 backend tests.
 - [finalized] Task 3 is ready for its individual commit and push.
+- [output] Task 4 added a minimal durable telemetry intake path: canonical
+  fingerprinted append, active-assignment quarantine, per-device boot/sequence
+  ordering, batch replay with row-level retry isolation, API routes, and a
+  lifespan-managed worker.
+- [decision] Keep Task 4 limited to immutable inbox and stream-state effects;
+  evidence and incident effects remain for their planned later tasks. Within an
+  active epoch, sequence order wins over device-clock jitter, while pre-boot
+  retries and stale boots are audit-only.
+- [failure] The poison-row regression initially exposed a stale ORM identity
+  after the retry SQL update. The database state changed but the loaded event
+  remained `pending`; synchronize the update session so callers and later work
+  see `retry` consistently.
+- [verification] TDD began with the telemetry package absent (expected import
+  failures). Final Docker verification passed `pytest backend/tests/telemetry
+  -q` (8 passed) and `pytest backend/tests -q` (40 passed); an unknown-device
+  HTTP POST returned 404 without acknowledgement.
+- [finalized] Task 4 implementation is complete and left unstaged for
+  independent task-level review and controller-owned commit/push.
+- [review-fix] Task 4 review found that ordering all unprocessed rows by
+  `received_at` lets an older poison retry consume every `limit=1` batch, and
+  that the original replay test never crossed a committed intake/session
+  boundary.
+- [decision] Preserve the existing schema and give `pending` rows durable
+  priority over `retry` rows in the claim query. Retries still drain once
+  current pending work is exhausted, while a malformed oldest row cannot starve
+  later valid telemetry. Use committed intake and two fresh worker sessions for
+  restart-equivalent exactly-once coverage; cleanup removes its temporary
+  durable rows after the assertion.
+- [verification] The new `limit=1` regression failed before the ordering change
+  (second batch reprocessed the poison row), then passed. Fresh Docker checks
+  passed worker replay tests 3/3, telemetry tests 9/9, and the full backend
+  suite 41/41.
+- [finalized] Task 4 review fixes are complete and remain unstaged for
+  re-review and controller-owned commit/push.
 
 ## Future Entry Format
 
