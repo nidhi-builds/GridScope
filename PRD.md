@@ -1,8 +1,8 @@
 # GridScope Final Product Requirements Document
 
-**Status:** Approved design, ready for implementation planning  
-**Date:** 2026-08-03  
-**Implementation budget:** 15-20 hours over 7 calendar days  
+**Status:** Approved design, ready for implementation planning
+**Date:** 2026-08-03
+**Implementation budget:** 15-20 hours over 7 calendar days
 **Source of truth:** This document supersedes the previous `PRD.md` and
 `PRD-claude.md`. The assignment files remain authoritative if a conflict is
 discovered.
