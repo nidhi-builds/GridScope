@@ -7,6 +7,9 @@ from fastapi.staticfiles import StaticFiles
 import asyncio
 
 from app.api.health import router as health_router
+from app.api.incidents import router as incidents_router
+from app.api.network import router as network_router
+from app.api.operations import router as operations_router
 from app.api.telemetry import router as telemetry_router
 from app.db import engine
 from app.schedules.feed import DatabaseScheduleFeed, ScheduleCache, poll_schedule_feed
@@ -20,6 +23,7 @@ async def lifespan(app: FastAPI):
     stop_schedules = asyncio.Event()
     app.state.schedule_cache = ScheduleCache()
     worker = asyncio.create_task(run_worker(stop_worker, app.state.schedule_cache))
+    app.state.worker = worker
     schedules = asyncio.create_task(poll_schedule_feed(DatabaseScheduleFeed(), app.state.schedule_cache, stop_schedules))
     try:
         yield
@@ -34,6 +38,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="GridScope", lifespan=lifespan)
 app.include_router(health_router)
 app.include_router(telemetry_router)
+app.include_router(incidents_router)
+app.include_router(network_router)
+app.include_router(operations_router)
 
 static_directory = Path("/app/static")
 if static_directory.is_dir():

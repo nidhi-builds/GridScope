@@ -485,6 +485,51 @@ decisions, design changes, implementation milestones, or verification results.
 - [finalized] Task 7 remaining review fixes are complete and left unstaged for
   re-review.
 
+### 2026-08-04
+
+- [output] Task 8 adds the non-simulator operational API: paginated incident,
+  planned-operation, and device-health reads; selected-incident GeoJSON;
+  ticket lifecycle actions; workflow readiness; typed API schemas; and a
+  generated OpenAPI document.
+- [decision] Keep read models as small SQLAlchemy query helpers over the
+  existing Task 2-7 tables. The API reuses the established workflow transition
+  service, so lifecycle validity and immutable ticket auditing have one owner.
+  Readiness treats the in-process worker task, seeded poles, and inbox age as
+  workflow dependencies while `/health` remains liveness-only.
+- [failure] Docker BuildKit could not export a rebuilt image because a local
+  parent snapshot was missing. The existing image started safely without a
+  rebuild; syncing current source to its installed package path enabled the
+  required test run without changing the persistent PostgreSQL volume. A first
+  conflict response also contained raw datetimes; encoding the typed 409 body
+  fixed the serialization failure.
+- [verification] Contract tests began RED with five absent-route/readiness
+  failures, then passed 6/6 after implementation. `python
+  scripts/export_openapi.py` generated `openapi.json` with all implemented
+  PRD Section 15 non-simulator paths. Full Docker backend regression passed
+  104/104; `git diff --check` passed for tracked changes.
+- [finalized] Task 8 is complete and left unstaged for independent review and
+  controller-owned commit/push.
+
+### 2026-08-04
+
+- [review-fix] Task 8 review found list-read N+1 queries and leaked geometry,
+  unbounded evidence/event N+1 reads, DT/feeder geometry reduced to a fallback
+  point, and undocumented mutation failures.
+- [decision] Keep the list compact and fetch inferred-topology flags in one
+  aggregate query. Detail evidence is bounded to 100 rows with page metadata,
+  class counts, and a single event join. DT/feeder GeoJSON exposes the actual
+  selected transformer and pole assets. Mutation decorators explicitly declare
+  the 404/409 typed error envelope already returned by the service.
+- [failure] The first grouped evidence-count implementation attempted to cast a
+  SQLAlchemy result directly to `dict`; materializing its rows fixed it.
+- [verification] New regressions first failed for all four review findings.
+  Docker API tests passed 10/10, full backend tests passed 108/108, and
+  regenerated OpenAPI includes mutation 404/409 responses. The restarted web
+  container serves readiness and the same OpenAPI contract; `git diff --check`
+  passed.
+- [finalized] Task 8 review fixes are complete and left unstaged for fresh
+  independent re-review.
+
 ## Future Entry Format
 
 ### YYYY-MM-DD
