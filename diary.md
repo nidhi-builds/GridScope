@@ -626,6 +626,28 @@ decisions, design changes, implementation milestones, or verification results.
 
 ### 2026-08-05
 
+- [request] Use Gemini for the optional English and Kannada explanation feature.
+- [decision] Replace the planned OpenAI Responses adapter with the Gemini
+  Developer API model `gemini-2.5-flash`. It is a wording-only, post-commit
+  integration: persisted incident facts remain authoritative, protected fields
+  must echo exactly, and no grounding or search is permitted.
+- [safety] A missing key, five-second timeout, malformed JSON, or protected
+  fact mismatch renders and records the deterministic bilingual fallback.
+  Gemini's free tier is suitable only for public demo data; production data-use
+  terms must be reviewed before any non-public data is sent.
+- [review] Independent review required an explicit Gemini response schema and
+  a frozen fact snapshot for post-commit work. The adapter now asks for the
+  exact `{english, kannada, protected}` object, validates it locally, and
+  queues facts rather than re-reading a changing incident. A missing committed
+  incident is dropped without an FK error (notably for rolled-back test work).
+- [verification] Task 10 RED: the new AI tests failed because `app.ai` was
+  absent. GREEN: focused AI, incident API, and incident workflow tests passed
+  `36 passed in 3.25s` using the existing Docker stack. Final backend
+  regression passed `148 passed, 1 skipped in 51.86s`; `compileall` and
+  `git diff --check` also passed.
+
+### 2026-08-05
+
 - [failure] A second independent Task 9 review found that generic event-count
   flags still let scenario labels stand in for proof, `repair_relapse` did not
   exercise a real relapse, and a simulator worker pass could evaluate a real

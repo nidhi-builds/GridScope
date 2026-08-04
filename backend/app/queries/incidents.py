@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.db.models.assets import Pole, TopologyEdge, Transformer
 from app.db.models.incidents import AIExplanation, Incident, IncidentBoundary, IncidentEvidence, PlannedOperation, TicketEvent
 from app.db.models.telemetry import TelemetryEvent
+from app.ai.summary import facts_from_incident, render_fallback
+from app.config import get_settings
 
 
 def list_incidents(session: Session, page: int, page_size: int, **filters) -> tuple[list[dict], int]:
@@ -50,10 +52,7 @@ def incident_detail(session: Session, incident_id: UUID, evidence_page: int = 1,
         "schedule_overlap": _operation(operation) if operation else None,
         "topology": topology,
         "ticket_events": [_ticket(event) for event in events],
-        "ai_explanation": None if explanation is None else {
-            "status": "fallback" if explanation.fallback_reason else "generated",
-            "text": explanation.validated_text, "fallback_reason": explanation.fallback_reason,
-        },
+        "ai_explanation": _explanation(session, incident, explanation),
     }
 
 
@@ -115,6 +114,22 @@ def _operation(row: PlannedOperation) -> dict:
 
 def _uuid(value: UUID | None) -> str | None:
     return str(value) if value else None
+
+
+def _explanation(session: Session, incident: Incident, row: AIExplanation | None) -> dict:
+    if row is None:
+        settings = get_settings()
+        return {
+            "status": "fallback", "text": render_fallback(facts_from_incident(session, incident)).as_dict(),
+            "model": None, "usage": {}, "latency_ms": 0,
+            "fallback_reason": "missing_api_key" if not settings.gemini_api_key else "pending_generation",
+            "generated_at": incident.created_at,
+        }
+    return {
+        "status": "fallback" if row.fallback_reason else "generated", "text": row.validated_text,
+        "model": row.model, "usage": row.usage, "latency_ms": row.latency_ms,
+        "fallback_reason": row.fallback_reason, "generated_at": row.created_at,
+    }
 
 
 def incident_feature_collection(session: Session, incident_id: UUID) -> dict | None:

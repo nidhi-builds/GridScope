@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.db.models.assets import Pole
 from app.db.models.incidents import Incident, IncidentBoundary, IncidentEvidence, TicketEvent
 from app.db.models.telemetry import TelemetryEvent
+from app.ai.service import queue_explanation
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,7 @@ def upsert_incident(session: Session, hypothesis: IncidentHypothesis) -> Inciden
     )
     opened = incident is None
     predecessor = None
+    material_change = False
     if opened:
         predecessor = session.scalar(
             select(Incident).where(Incident.correlation_key == hypothesis.correlation_key, Incident.status == "closed")
@@ -62,6 +64,7 @@ def upsert_incident(session: Session, hypothesis: IncidentHypothesis) -> Inciden
         session.add(incident)
         session.flush()
     else:
+        material_change = (incident.location_class, incident.confidence) != (hypothesis.location_class, hypothesis.confidence)
         incident.location_class = hypothesis.location_class
         incident.affected_count = hypothesis.affected_count
         incident.confidence = hypothesis.confidence
@@ -75,6 +78,8 @@ def upsert_incident(session: Session, hypothesis: IncidentHypothesis) -> Inciden
         _audit(session, predecessor, "relapse_detected", f"relapse_detected:{incident.id}")
     if opened and hypothesis.fault_class == "feeder":
         _roll_up(session, incident)
+    if opened or material_change:
+        queue_explanation(session, incident)
     return incident
 
 

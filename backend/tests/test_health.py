@@ -28,5 +28,5 @@ def test_ready_reports_database(client):
 def test_settings_use_required_runtime_defaults():
     settings = Settings(_env_file=None)
 
-    assert settings.openai_model == "gpt-5.6-luna"
+    assert settings.gemini_model == "gemini-2.5-flash"
     assert settings.poll_interval_ms == 3000

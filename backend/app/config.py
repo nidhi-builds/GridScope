@@ -8,8 +8,8 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
     seed: bool = True
-    openai_api_key: str | None = None
-    openai_model: str = "gpt-5.6-luna"
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
     worker_batch_size: int = 100
     poll_interval_ms: int = 3000
 

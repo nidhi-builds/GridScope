@@ -18,6 +18,10 @@ def test_incident_detail_contains_operational_context(client, seeded_incident):
     assert body["pin"]["value"]
     assert body["confidence"]["reasons"]
     assert body["ticket_events"]
+    assert body["ai_explanation"]["status"] == "fallback"
+    assert body["ai_explanation"]["text"]["english"]
+    assert body["ai_explanation"]["text"]["kannada"]
+    assert body["ai_explanation"]["fallback_reason"] == "missing_api_key"
 
 
 def test_incident_list_is_paginated(client, seeded_incident):
