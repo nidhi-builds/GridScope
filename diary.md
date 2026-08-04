@@ -275,6 +275,43 @@ decisions, design changes, implementation milestones, or verification results.
   suite 41/41.
 - [finalized] Task 4 review fixes are complete and remain unstaged for
   re-review and controller-owned commit/push.
+- [output] Task 5 adds deterministic pole evidence transitions and DT-scoped
+  Tier-1 candidates. Current `power_lost` is direct dark evidence; live events
+  are direct live evidence; heartbeat expiry becomes `unknown_silent` only.
+  Candidates settle for 30 seconds, cap corroboration at 45 seconds, and turn
+  uncorroborated reports into a device-health outcome at 120 seconds.
+- [decision] Reuse the Task 2 persistence schema. Persist the database's
+  existing `device_suspect` state vocabulary while exposing `device_issue` as
+  the candidate classification, avoiding a speculative migration before Task 6
+  owns localization and classification.
+- [failure] The first replay regression cleanup deleted telemetry before its
+  new evidence FK, leaving one local test heartbeat row after rollback. The
+  test now deletes only evidence sourced by its temporary event first; the
+  already-created known test row, linked evidence, and stream state were
+  removed explicitly before the final regression.
+- [failure] Final inspection found that evidence restoration reused the
+  database update timestamp as a pre-fault heartbeat time. A focused replay
+  regression failed with the current wall-clock value; persist and restore the
+  accepted event timestamp in evidence JSON instead.
+- [verification] TDD first failed with missing detection modules, then caught
+  the default heartbeat-freshness edge case and the worker's initially absent
+  domain effect. Fresh Docker verification passed evidence, candidate, and
+  telemetry checks: 17 passed; the full backend suite passed 49 tests.
+- [review-fix] Task 5 review found that Tier-2 correlation could decide before
+  the settle window, late live evidence could alter the fixed window, persisted
+  heartbeat evidence never expired, and device issues left direct-dark evidence
+  consumable by later localization.
+- [decision] Keep timing derived from the candidate's immutable first receive
+  time: do no topology correlation before +30 seconds and consider live support
+  only through +45 seconds. The production loop supplies wall-clock time for
+  expiry/evaluation; the batch helper accepts an optional time to keep replay
+  tests deterministic. Device-health outcomes retain the event source and prior
+  provenance in JSON metadata while converting direct dark state to the schema-
+  valid `device_suspect` value.
+- [verification] New tests first failed for early dark/live promotion, late
+  live-child/parent correlation, absent durable heartbeat expiry, and dark
+  evidence left after isolated/live-child device issues. Fresh Docker checks
+  passed detection plus telemetry tests 23/23 and the full backend suite 55/55.
 
 ## Future Entry Format
 

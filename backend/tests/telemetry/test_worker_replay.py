@@ -2,11 +2,12 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import delete, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.db import SessionLocal, engine
-from app.db.models.assets import DeviceAssignment
-from app.db.models.telemetry import DeviceStreamState, TelemetryEvent
+from app.db.models.assets import DeviceAssignment, Pole, TopologyEdge
+from app.db.models.telemetry import DetectionCandidate, DeviceStreamState, PoleEvidenceState, TelemetryEvent
+from app.detection.candidates import evaluate_candidate
 from app.telemetry.ingestion import accept_payload
 from app.telemetry.schemas import TelemetryPayload
 from app.telemetry.worker import process_inbox_batch
@@ -48,6 +49,7 @@ def test_worker_replays_committed_event_once_in_a_fresh_session():
     finally:
         if event_id is not None:
             with SessionLocal.begin() as cleanup:
+                cleanup.execute(delete(PoleEvidenceState).where(PoleEvidenceState.source_event_id == event_id))
                 cleanup.execute(delete(TelemetryEvent).where(TelemetryEvent.id == event_id))
                 cleanup.execute(delete(DeviceStreamState).where(DeviceStreamState.device_id == device_id))
 
@@ -125,5 +127,193 @@ def test_retry_does_not_starve_a_later_pending_row_when_limit_is_one():
                 assert session.get(TelemetryEvent, poison.id).processing_state == "retry"
                 assert process_inbox_batch(session, limit=1).processed == 1
                 assert session.get(TelemetryEvent, accepted.event_id).processed_at is not None
+        finally:
+            transaction.rollback()
+
+
+def test_current_dark_replay_creates_one_evidence_state_and_candidate():
+    # Break caught: accepted replay advances only stream state and never detection state.
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with Session(bind=connection) as session:
+                assignment = session.scalar(
+                    select(DeviceAssignment)
+                    .outerjoin(DeviceStreamState, DeviceStreamState.device_id == DeviceAssignment.device_id)
+                    .limit(1)
+                )
+                accepted = accept_payload(
+                    session,
+                    TelemetryPayload(
+                        device_id=assignment.device_id,
+                        pole_id=assignment.pole_id,
+                        seq=1,
+                        ts=NOW,
+                        event_type="power_lost",
+                        energized=False,
+                    ),
+                    NOW,
+                )
+
+                assert process_inbox_batch(session, limit=10).processed == 1
+
+                evidence = session.scalar(select(PoleEvidenceState).where(PoleEvidenceState.pole_id == assignment.pole_id))
+                transformer_id = session.get(Pole, assignment.pole_id).transformer_id
+                candidates = list(session.scalars(
+                    select(DetectionCandidate).where(DetectionCandidate.transformer_id == transformer_id)
+                ))
+                assert evidence.evidence_class == "confirmed_dark"
+                assert evidence.source_event_id == accepted.event_id
+                assert len(candidates) == 1
+                assert candidates[0].evidence_event_ids == [str(accepted.event_id)]
+        finally:
+            transaction.rollback()
+
+
+def test_worker_retains_the_accepted_pre_fault_live_time():
+    # Break caught: evidence serialization replaces the live event time with database update time.
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with Session(bind=connection) as session:
+                assignment = session.scalar(
+                    select(DeviceAssignment)
+                    .outerjoin(DeviceStreamState, DeviceStreamState.device_id == DeviceAssignment.device_id)
+                    .limit(1)
+                )
+                for seq, event_type, energized in ((1, "heartbeat", True), (2, "power_lost", False)):
+                    accept_payload(
+                        session,
+                        TelemetryPayload(
+                            device_id=assignment.device_id,
+                            pole_id=assignment.pole_id,
+                            seq=seq,
+                            ts=NOW + timedelta(seconds=seq - 1),
+                            event_type=event_type,
+                            energized=energized,
+                        ),
+                        NOW + timedelta(seconds=seq - 1),
+                    )
+
+                assert process_inbox_batch(session, limit=10).processed == 2
+
+                evidence = session.scalar(select(PoleEvidenceState).where(PoleEvidenceState.pole_id == assignment.pole_id))
+                assert evidence.evidence["pre_fault_live_at"] == NOW.isoformat()
+        finally:
+            transaction.rollback()
+
+
+def test_worker_expires_persisted_heartbeat_to_silent_not_dark():
+    # Break caught: durable evidence never transitions to unknown after heartbeat expiry.
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with Session(bind=connection) as session:
+                assignment = session.scalar(select(DeviceAssignment).limit(1))
+                state = PoleEvidenceState(
+                    pole_id=assignment.pole_id,
+                    evidence_class="confirmed_live",
+                    device_health="healthy",
+                    fresh_until=NOW + timedelta(minutes=15),
+                    evidence={"device_id": str(assignment.device_id), "observed_at": NOW.isoformat()},
+                )
+                session.add(state)
+
+                process_inbox_batch(session, limit=0, now=NOW + timedelta(minutes=16))
+
+                assert state.evidence_class == "unknown_silent"
+                assert state.device_health == "silent"
+                assert state.evidence["prior_evidence_class"] == "confirmed_live"
+        finally:
+            transaction.rollback()
+
+
+def test_device_issue_marks_dark_evidence_suspect_with_provenance():
+    # Break caught: an expired isolated dark report remains consumable as direct outage evidence.
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with Session(bind=connection) as session:
+                assignment = session.scalar(
+                    select(DeviceAssignment)
+                    .outerjoin(DeviceStreamState, DeviceStreamState.device_id == DeviceAssignment.device_id)
+                    .limit(1)
+                )
+                accepted = accept_payload(
+                    session,
+                    TelemetryPayload(
+                        device_id=assignment.device_id,
+                        pole_id=assignment.pole_id,
+                        seq=1,
+                        ts=NOW,
+                        event_type="power_lost",
+                        energized=False,
+                    ),
+                    NOW,
+                )
+                process_inbox_batch(session, limit=10)
+                candidate = session.scalar(select(DetectionCandidate))
+
+                outcome = evaluate_candidate(candidate.id, NOW + timedelta(seconds=120), session)
+                evidence = session.scalar(select(PoleEvidenceState).where(PoleEvidenceState.pole_id == assignment.pole_id))
+
+                assert outcome.classification == "device_issue"
+                assert evidence.evidence_class == "device_suspect"
+                assert evidence.source_event_id == accepted.event_id
+                assert evidence.evidence["prior_evidence_class"] == "confirmed_dark"
+                assert evidence.evidence["source_event_id"] == str(accepted.event_id)
+        finally:
+            transaction.rollback()
+
+
+def test_live_child_device_issue_marks_the_dark_parent_suspect():
+    # Break caught: a live-child contradiction leaves its dark parent as actionable evidence.
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with Session(bind=connection) as session:
+                parent = aliased(DeviceAssignment)
+                child = aliased(DeviceAssignment)
+                pair = session.execute(
+                    select(parent, child)
+                    .join(TopologyEdge, TopologyEdge.parent_pole_id == parent.pole_id)
+                    .join(child, child.pole_id == TopologyEdge.child_pole_id)
+                    .where(TopologyEdge.is_visible.is_(True))
+                    .limit(1)
+                ).one()
+                dark, live = pair
+                dark_event = accept_payload(
+                    session,
+                    TelemetryPayload(
+                        device_id=dark.device_id,
+                        pole_id=dark.pole_id,
+                        seq=1,
+                        ts=NOW,
+                        event_type="power_lost",
+                        energized=False,
+                    ),
+                    NOW,
+                )
+                accept_payload(
+                    session,
+                    TelemetryPayload(
+                        device_id=live.device_id,
+                        pole_id=live.pole_id,
+                        seq=1,
+                        ts=NOW + timedelta(seconds=1),
+                        event_type="heartbeat",
+                        energized=True,
+                    ),
+                    NOW + timedelta(seconds=1),
+                )
+                process_inbox_batch(session, limit=10)
+                candidate = session.scalar(select(DetectionCandidate))
+
+                outcome = evaluate_candidate(candidate.id, NOW + timedelta(seconds=30), session)
+                evidence = session.scalar(select(PoleEvidenceState).where(PoleEvidenceState.pole_id == dark.pole_id))
+
+                assert outcome.defeated_reason == "fresh_live_child"
+                assert evidence.evidence_class == "device_suspect"
+                assert evidence.source_event_id == dark_event.event_id
         finally:
             transaction.rollback()

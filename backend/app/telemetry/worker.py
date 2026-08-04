@@ -1,13 +1,16 @@
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
+from uuid import UUID
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import SessionLocal
-from app.db.models.telemetry import DeviceStreamState, TelemetryEvent
+from app.db.models.telemetry import DeviceStreamState, PoleEvidenceState, TelemetryEvent
+from app.detection.candidates import attach_candidate, evaluate_open_candidates
+from app.detection.evidence import PoleEvidence, apply_event, expire_heartbeat
 from app.telemetry.stream_state import StreamEvent, StreamState, advance_stream
 
 
@@ -18,7 +21,7 @@ class BatchResult:
     failed: int = 0
 
 
-def process_inbox_batch(session: Session, limit: int) -> BatchResult:
+def process_inbox_batch(session: Session, limit: int, now: datetime | None = None) -> BatchResult:
     rows = list(session.scalars(
         select(TelemetryEvent)
         .where(TelemetryEvent.processed_at.is_(None), TelemetryEvent.processing_state.in_(("pending", "retry")))
@@ -40,6 +43,9 @@ def process_inbox_batch(session: Session, limit: int) -> BatchResult:
                 .execution_options(synchronize_session="fetch")
             )
             failed += 1
+    if now is not None:
+        _expire_evidence(session, now)
+        evaluate_open_candidates(session, now)
     session.flush()
     return BatchResult(len(rows), processed, failed)
 
@@ -70,17 +76,82 @@ def _process_row(session: Session, row: TelemetryEvent) -> None:
             state_row.last_sequence = decision.next_state.last_sequence
             state_row.last_device_time = decision.next_state.last_device_time
             state_row.last_received_at = decision.next_state.last_received_at
+        _apply_detection(session, row)
     row.processing_state = "processed" if decision.action == "apply" else "audit_only"
     row.epoch_decision = decision.reason
     row.processed_at = datetime.now(row.received_at.tzinfo)
     row.failed_reason = None
 
 
+def _apply_detection(session: Session, row: TelemetryEvent) -> None:
+    state_row = session.scalar(
+        select(PoleEvidenceState).where(PoleEvidenceState.pole_id == row.pole_id).with_for_update()
+    )
+    previous = _to_evidence(state_row) if state_row else None
+    decision = apply_event(previous, row, row.received_at)
+    evidence = decision.evidence
+    values = {
+        "evidence_class": evidence.evidence_class,
+        "source_event_id": evidence.source_event_id,
+        "fresh_until": evidence.fresh_until,
+        "device_health": evidence.device_health,
+        "evidence": {
+            "device_id": str(evidence.device_id) if evidence.device_id else None,
+            "observed_at": evidence.observed_at.isoformat(),
+            "pre_fault_live_at": evidence.pre_fault_live_at.isoformat() if evidence.pre_fault_live_at else None,
+        },
+    }
+    if state_row is None:
+        session.add(PoleEvidenceState(pole_id=row.pole_id, **values))
+    else:
+        for name, value in values.items():
+            setattr(state_row, name, value)
+    attach_candidate(session, row)
+
+
+def _to_evidence(state: PoleEvidenceState) -> PoleEvidence:
+    pre_fault_live_at = state.evidence.get("pre_fault_live_at")
+    return PoleEvidence(
+        state.pole_id,
+        UUID(state.evidence["device_id"]) if state.evidence.get("device_id") else None,
+        state.evidence_class,
+        state.device_health,
+        datetime.fromisoformat(state.evidence["observed_at"]) if state.evidence.get("observed_at") else state.updated_at,
+        state.source_event_id,
+        state.fresh_until,
+        datetime.fromisoformat(pre_fault_live_at) if pre_fault_live_at else None,
+    )
+
+
+def _expire_evidence(session: Session, now: datetime) -> None:
+    states = session.scalars(
+        select(PoleEvidenceState)
+        .where(
+            PoleEvidenceState.fresh_until.is_not(None),
+            PoleEvidenceState.fresh_until < now,
+            PoleEvidenceState.evidence_class.in_(("confirmed_live", "confirmed_dark")),
+        )
+        .with_for_update()
+    )
+    for state in states:
+        decision = expire_heartbeat(_to_evidence(state), now)
+        evidence = decision.evidence
+        prior_evidence_class = state.evidence_class
+        state.evidence_class = evidence.evidence_class
+        state.device_health = evidence.device_health
+        state.fresh_until = evidence.fresh_until
+        state.evidence = {
+            **state.evidence,
+            "prior_evidence_class": prior_evidence_class,
+            "source_event_id": str(state.source_event_id) if state.source_event_id else None,
+        }
+
+
 async def run_worker(stop: asyncio.Event) -> None:
     settings = get_settings()
     while not stop.is_set():
         with SessionLocal.begin() as session:
-            process_inbox_batch(session, settings.worker_batch_size)
+            process_inbox_batch(session, settings.worker_batch_size, datetime.now(UTC))
         try:
             await asyncio.wait_for(stop.wait(), timeout=settings.poll_interval_ms / 1000)
         except TimeoutError:
