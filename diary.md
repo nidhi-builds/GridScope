@@ -313,6 +313,97 @@ decisions, design changes, implementation milestones, or verification results.
   evidence left after isolated/live-child device issues. Fresh Docker checks
   passed detection plus telemetry tests 23/23 and the full backend suite 55/55.
 
+### 2026-08-04
+
+- [output] Task 6 adds pure deterministic localization, scope classification,
+  schedule matching/cache, navigation/PIN resolution, and categorical
+  confidence. Tier-2 candidates now expose their supported boundaries for the
+  later incident workflow without creating incidents themselves.
+- [decision] Keep the new domain layer intentionally in-memory and duck-typed:
+  Tasks 2-5 already provide the database schema and evidence state, while Task
+  7 owns incident persistence. Exact inferred spans require an explicit
+  calibrated gate; otherwise an adjacent boundary remains a corridor.
+- [decision] Schedule cache keeps versioned successful snapshots, marks the
+  retained snapshot stale on feed failure, and never changes its outage timing
+  window. A stale but still-applicable snapshot only lowers confidence.
+- [failure] Rebuilding the web image failed because Docker Desktop could not
+  resolve Docker Hub's Python image metadata. The existing required container
+  remained available, so current Task 6 sources were copied into it solely for
+  Python-path verification; no image, database, or volume was changed.
+- [verification] TDD began with five missing Task 6 module import failures;
+  the candidate integration then failed as expected before it exposed a
+  boundary, and the schedule snapshot test failed before snapshot support was
+  added. Final current-source Docker checks passed detection 19/19 and the full
+  backend suite 65/65; `git diff --check` passed.
+- [finalized] Task 6 implementation is complete and left unstaged for
+  independent task-level review and controller-owned commit/push.
+
+### 2026-08-04
+
+- [review-fix] Task 6 review found that candidate localization silently
+  defaulted to registry topology, schedule polling used an empty mock, scope
+  matching was too broad, DT classification ignored live contradictions,
+  confidence trusted an arbitrary inferred flag, and higher-scope navigation
+  was not asset-aware.
+- [decision] Carry graph topology source into localization and require measured
+  inferred precision >=90% for an exact inferred span. Task 3 does not persist
+  that measured report on edges, so database-backed inferred candidates remain
+  conservatively corridor-only until one is supplied. Poll Task 2
+  `scheduled_outages` rows; classify and match only equivalent DT/feeder scope.
+- [decision] A DT requires at least two directly observable, dark first-level
+  branches with no fresh live branch; a single branch remains span/ambiguous.
+  Feeder navigation is the centroid of its transformer assets, while DT uses
+  its registry coordinate and still resolves PIN from member poles.
+- [verification] New red tests caught all six review findings, including the
+  real transformer `feeder_id` centroid field. Final exact Docker checks passed
+  `pytest backend/tests/detection -q` 28/28 and `pytest backend/tests -q`
+  74/74; `git diff --check` passed. Docker Hub DNS still prevented an image
+  rebuild, so the source was safely copied into the existing web container and
+  installed editable only for verification.
+- [finalized] Task 6 review fixes are complete and remain unstaged for
+  independent re-review and controller-owned commit/push.
+
+### 2026-08-04
+
+- [review-fix] Follow-up review found that operational candidate evaluation
+  bypassed the lifespan-owned schedule cache, feeder quorum could not be
+  reached across DT candidates, branch coverage treated late live telemetry as
+  contradictory, and feeder PIN fallback skipped member-pole registry PINs.
+- [decision] The worker passes the current cache snapshot through every batch;
+  an empty stale snapshot is used before the first fetch so the operational path
+  never bypasses cache semantics. Direct `evaluate_candidate` calls retain the
+  database fallback for focused tests. Feeder coverage aggregates prior
+  DT-qualified actionable candidates on the same feeder; it becomes reachable
+  on the normal next worker pass without inventing cross-DT state.
+- [decision] DT branch coverage considers only candidate-window evidence
+  received from onset through 45 seconds. Feeder PIN lookup limits candidates
+  to poles belonging to transformer assets on that feeder before offline
+  inference.
+- [verification] Red tests exposed the feeder PIN fallback and an additional
+  sibling-branch promotion gap; the latter was fixed so independent DT branches
+  can become a candidate. Final exact Docker checks passed
+  `pytest backend/tests/detection -q` 30/30 and `pytest backend/tests -q`
+  78/78; `git diff --check` passed. The existing synced/editable web runtime
+  was retained because Docker Hub DNS still prevents image rebuilding.
+- [finalized] Task 6 follow-up fixes are complete and remain unstaged for
+  independent re-review and controller-owned commit/push.
+
+### 2026-08-04
+
+- [review-fix] Final Task 6 review found feeder aggregation could combine
+  otherwise qualified DT candidates from unrelated correlation windows.
+- [decision] Filter durable same-feeder actionable DT candidates by the current
+  candidate's immutable `first_received_at` through `+45s` hard deadline before
+  applying feeder quorum. Earlier or later DT outages remain independent.
+- [verification] A DB-backed regression created current, 46-second-old, and
+  46-second-late DT candidates that previously met quorum; it failed before the
+  timing input/filter and passed afterward. Exact Docker checks passed worker
+  replay 11/11, detection 30/30, and full backend 79/79; `git diff --check`
+  passed. Existing source-synced editable runtime remains necessary while
+  Docker Hub DNS prevents image rebuild.
+- [finalized] Task 6 feeder-window fix is complete and unstaged for focused
+  re-review and controller-owned commit/push.
+
 ## Future Entry Format
 
 ### YYYY-MM-DD

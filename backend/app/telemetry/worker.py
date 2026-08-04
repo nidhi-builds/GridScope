@@ -11,6 +11,7 @@ from app.db import SessionLocal
 from app.db.models.telemetry import DeviceStreamState, PoleEvidenceState, TelemetryEvent
 from app.detection.candidates import attach_candidate, evaluate_open_candidates
 from app.detection.evidence import PoleEvidence, apply_event, expire_heartbeat
+from app.schedules.feed import ScheduleSnapshot
 from app.telemetry.stream_state import StreamEvent, StreamState, advance_stream
 
 
@@ -21,7 +22,7 @@ class BatchResult:
     failed: int = 0
 
 
-def process_inbox_batch(session: Session, limit: int, now: datetime | None = None) -> BatchResult:
+def process_inbox_batch(session: Session, limit: int, now: datetime | None = None, schedules=None) -> BatchResult:
     rows = list(session.scalars(
         select(TelemetryEvent)
         .where(TelemetryEvent.processed_at.is_(None), TelemetryEvent.processing_state.in_(("pending", "retry")))
@@ -45,7 +46,7 @@ def process_inbox_batch(session: Session, limit: int, now: datetime | None = Non
             failed += 1
     if now is not None:
         _expire_evidence(session, now)
-        evaluate_open_candidates(session, now)
+        evaluate_open_candidates(session, now, schedules)
     session.flush()
     return BatchResult(len(rows), processed, failed)
 
@@ -147,11 +148,15 @@ def _expire_evidence(session: Session, now: datetime) -> None:
         }
 
 
-async def run_worker(stop: asyncio.Event) -> None:
+async def run_worker(stop: asyncio.Event, schedule_cache=None) -> None:
     settings = get_settings()
     while not stop.is_set():
         with SessionLocal.begin() as session:
-            process_inbox_batch(session, settings.worker_batch_size, datetime.now(UTC))
+            now = datetime.now(UTC)
+            schedules = schedule_cache.current if schedule_cache else None
+            if schedule_cache and schedules is None:
+                schedules = ScheduleSnapshot((), now, stale=True)
+            process_inbox_batch(session, settings.worker_batch_size, now, schedules)
         try:
             await asyncio.wait_for(stop.wait(), timeout=settings.poll_interval_ms / 1000)
         except TimeoutError:

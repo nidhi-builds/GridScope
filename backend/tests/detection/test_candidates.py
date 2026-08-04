@@ -57,6 +57,61 @@ def test_two_consistent_dark_reports_are_actionable_after_settle_window():
     assert outcome.actionable is True
 
 
+def test_actionable_candidate_exposes_supported_boundary():
+    # Break caught: promoted evidence has no deterministic location for later incident creation.
+    outcome = evaluate_events(
+        [Event(P4, "power_lost", NOW, False), Event(P5, "power_lost", NOW + timedelta(seconds=2), False)],
+        graph=LINE_GRAPH,
+        now=NOW + timedelta(seconds=30),
+    )
+
+    assert outcome.boundaries[0].kind == "corridor"
+
+
+def test_candidate_carries_inferred_calibration_gate_to_localization():
+    # Break caught: inferred graph evidence silently falls back to registry precision.
+    graph = NetworkGraph("DT", [("DT", P3), (P3, P4), (P4, P5)])
+    graph.topology_source = "inferred"
+    graph.calibration_precision = 0.89
+    outcome = evaluate_events(
+        [Event(P4, "power_lost", NOW, False), Event(P5, "power_lost", NOW, False), Event(P3, "heartbeat", NOW, True)],
+        graph=graph,
+        now=NOW + timedelta(seconds=30),
+    )
+
+    assert outcome.boundaries[0].kind == "corridor"
+
+
+def test_candidate_marks_only_equivalent_dt_schedule_as_planned():
+    # Break caught: Tier-2 evidence ignores a telemetry-matching current DT schedule.
+    schedule = {"id": "S1", "scope": {"transformer_id": "DT"}, "scheduled_start": NOW, "scheduled_end": NOW + timedelta(hours=1)}
+    outcome = evaluate_events(
+        [Event(P4, "power_lost", NOW, False), Event(P5, "power_lost", NOW, False)],
+        graph=LINE_GRAPH,
+        now=NOW + timedelta(seconds=30),
+        coverage={"dt_branches": {"DT": {"dark": {P3, P4}, "observable": {P3, P4}}}},
+        schedules=[schedule],
+    )
+
+    assert outcome.candidate_state == "planned_operation"
+    assert outcome.classification == "planned_outage"
+
+
+def test_late_live_branch_does_not_contradict_dt_classification():
+    # Break caught: post-window live telemetry suppresses a settled DT pattern.
+    graph = NetworkGraph("DT", [("DT", "A"), ("DT", "B"), ("DT", "C")])
+    outcome = evaluate_events(
+        [
+            Event("A", "power_lost", NOW, False), Event("B", "power_lost", NOW + timedelta(seconds=1), False),
+            Event("C", "heartbeat", NOW + timedelta(seconds=50), True),
+        ],
+        graph=graph,
+        now=NOW + timedelta(seconds=50),
+    )
+
+    assert outcome.classification == "dt"
+
+
 def test_two_dark_reports_wait_for_the_settle_window():
     # Break caught: correlated reports dispatch before the configured settle window closes.
     outcome = evaluate_events(

@@ -1,19 +1,76 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, aliased
 
 from app.db import SessionLocal, engine
-from app.db.models.assets import DeviceAssignment, Pole, TopologyEdge
+from app.db.models.assets import DeviceAssignment, Pole, TopologyEdge, Transformer
 from app.db.models.telemetry import DetectionCandidate, DeviceStreamState, PoleEvidenceState, TelemetryEvent
-from app.detection.candidates import evaluate_candidate
+from app.detection.candidates import _feeder_coverage, evaluate_candidate
 from app.telemetry.ingestion import accept_payload
 from app.telemetry.schemas import TelemetryPayload
 from app.telemetry.worker import process_inbox_batch
+from app.schedules.feed import ScheduleSnapshot
 
 
 NOW = datetime(2026, 8, 3, 12, 0, tzinfo=UTC)
+
+
+def test_db_feeder_coverage_aggregates_qualified_dt_candidates():
+    # Break caught: isolated DT candidates can never reach feeder scope in the worker path.
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with Session(bind=connection) as session:
+                feeder_id = session.scalar(select(Transformer.feeder_id).group_by(Transformer.feeder_id).limit(1))
+                transformer_ids = list(session.scalars(select(Transformer.id).where(Transformer.feeder_id == feeder_id).limit(3)))
+                for transformer_id in transformer_ids:
+                    session.add(DetectionCandidate(transformer_id=transformer_id, scope_key=f"dt:{transformer_id}", first_received_at=NOW, expires_at=NOW, status="actionable", promotion_outcome="dt"))
+                session.flush()
+
+                coverage = _feeder_coverage(session, transformer_ids[0], NOW)
+
+                assert coverage["feeder_dts"][feeder_id]["qualifying"] == set(transformer_ids)
+        finally:
+            transaction.rollback()
+
+
+def test_db_feeder_coverage_excludes_old_and_late_dt_candidates():
+    # Break caught: separate DT incidents outside one 45-second window manufacture a feeder outage.
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with Session(bind=connection) as session:
+                feeder_id = session.scalar(
+                    select(Transformer.feeder_id).group_by(Transformer.feeder_id).having(func.count() >= 3).limit(1)
+                )
+                transformer_ids = list(session.scalars(select(Transformer.id).where(Transformer.feeder_id == feeder_id).limit(3)))
+                session.execute(delete(DetectionCandidate).where(DetectionCandidate.transformer_id.in_(transformer_ids)))
+                for transformer_id, first in zip(transformer_ids, (NOW, NOW - timedelta(seconds=46), NOW + timedelta(seconds=46))):
+                    session.add(DetectionCandidate(transformer_id=transformer_id, scope_key=f"dt:{transformer_id}", first_received_at=first, expires_at=first, status="actionable", promotion_outcome="dt"))
+                session.flush()
+
+                coverage = _feeder_coverage(session, transformer_ids[0], NOW)
+
+                assert coverage["feeder_dts"][feeder_id]["qualifying"] == {transformer_ids[0]}
+        finally:
+            transaction.rollback()
+
+
+def test_worker_passes_lifespan_schedule_snapshot_to_candidate_evaluation(monkeypatch):
+    # Break caught: operational detection re-queries schedule rows and loses the cache stale flag.
+    captured = []
+    monkeypatch.setattr("app.telemetry.worker.evaluate_open_candidates", lambda session, now, schedules: captured.append(schedules))
+    snapshot = ScheduleSnapshot((), NOW, stale=True)
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        try:
+            with Session(bind=connection) as session:
+                process_inbox_batch(session, limit=0, now=NOW, schedules=snapshot)
+            assert captured == [snapshot]
+        finally:
+            transaction.rollback()
 
 
 def test_worker_replays_committed_event_once_in_a_fresh_session():

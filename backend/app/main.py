@@ -9,6 +9,7 @@ import asyncio
 from app.api.health import router as health_router
 from app.api.telemetry import router as telemetry_router
 from app.db import engine
+from app.schedules.feed import DatabaseScheduleFeed, ScheduleCache, poll_schedule_feed
 from app.telemetry.worker import run_worker
 
 
@@ -16,12 +17,17 @@ from app.telemetry.worker import run_worker
 async def lifespan(app: FastAPI):
     app.state.engine = engine
     stop_worker = asyncio.Event()
-    worker = asyncio.create_task(run_worker(stop_worker))
+    stop_schedules = asyncio.Event()
+    app.state.schedule_cache = ScheduleCache()
+    worker = asyncio.create_task(run_worker(stop_worker, app.state.schedule_cache))
+    schedules = asyncio.create_task(poll_schedule_feed(DatabaseScheduleFeed(), app.state.schedule_cache, stop_schedules))
     try:
         yield
     finally:
         stop_worker.set()
+        stop_schedules.set()
         await worker
+        await schedules
         engine.dispose()
 
 
