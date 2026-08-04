@@ -73,6 +73,8 @@ def localize(graph: NetworkGraph, evidence: Any) -> list[BoundaryResult]:
 
 
 def _nearest_live_path(graph: NetworkGraph, dark: Hashable, live: set[Hashable]) -> list[Hashable]:
+    if dark not in graph.graph:
+        return []
     current = dark
     reverse = [dark]
     while current != graph.root_id:

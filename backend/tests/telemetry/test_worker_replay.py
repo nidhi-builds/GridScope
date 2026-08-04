@@ -26,7 +26,7 @@ def test_db_feeder_coverage_aggregates_qualified_dt_candidates():
                 feeder_id = session.scalar(select(Transformer.feeder_id).group_by(Transformer.feeder_id).limit(1))
                 transformer_ids = list(session.scalars(select(Transformer.id).where(Transformer.feeder_id == feeder_id).limit(3)))
                 for transformer_id in transformer_ids:
-                    session.add(DetectionCandidate(transformer_id=transformer_id, scope_key=f"dt:{transformer_id}", first_received_at=NOW, expires_at=NOW, status="actionable", promotion_outcome="dt"))
+                    session.add(DetectionCandidate(transformer_id=transformer_id, scope_key=f"dt:{transformer_id}", first_received_at=NOW, expires_at=NOW, status="actionable", promotion_outcome="dt", evidence_event_ids=["dark-1", "dark-2"]))
                 session.flush()
 
                 coverage = _feeder_coverage(session, transformer_ids[0], NOW)
@@ -48,7 +48,7 @@ def test_db_feeder_coverage_excludes_old_and_late_dt_candidates():
                 transformer_ids = list(session.scalars(select(Transformer.id).where(Transformer.feeder_id == feeder_id).limit(3)))
                 session.execute(delete(DetectionCandidate).where(DetectionCandidate.transformer_id.in_(transformer_ids)))
                 for transformer_id, first in zip(transformer_ids, (NOW, NOW - timedelta(seconds=46), NOW + timedelta(seconds=46))):
-                    session.add(DetectionCandidate(transformer_id=transformer_id, scope_key=f"dt:{transformer_id}", first_received_at=first, expires_at=first, status="actionable", promotion_outcome="dt"))
+                    session.add(DetectionCandidate(transformer_id=transformer_id, scope_key=f"dt:{transformer_id}", first_received_at=first, expires_at=first, status="actionable", promotion_outcome="dt", evidence_event_ids=["dark-1", "dark-2"]))
                 session.flush()
 
                 coverage = _feeder_coverage(session, transformer_ids[0], NOW)

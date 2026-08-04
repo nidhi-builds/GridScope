@@ -530,6 +530,122 @@ decisions, design changes, implementation milestones, or verification results.
 - [finalized] Task 8 review fixes are complete and left unstaged for fresh
   independent re-review.
 
+### 2026-08-04
+
+- [output] Task 9 adds deterministic simulator physics, 17 named scenario
+  presets, public-ingest-backed run/repair APIs, and a JSON-lines headless
+  runner. Span physics follows hidden-truth descendants; firmware 1.2 devices
+  remain silent, while modern devices make one independently seeded dying
+  message attempt and repair emits boot/restoration payloads.
+- [decision] Simulator payloads carry `simulator_run_id` only as provenance;
+  the public telemetry validation and durable append service remain the sole
+  input path. Reset removes only tagged simulator telemetry and its direct
+  temporary state, rather than touching seeded assets.
+- [failure] The first headless matrix retained eleven simulator telemetry rows
+  and contaminated unrelated test assumptions. Counts and timestamps confirmed
+  the affected state was only synthetic Task 9 data; it was cleared in one
+  scoped transaction, then message tagging and targeted reset support were
+  added. A restart race initially produced connection refused; health was
+  available before the retry.
+- [verification] TDD began RED because the running image lacked Task 9 files;
+  after source sync, focused physics/scenario/service/API checks passed 23/23
+  and clean-seed backend regression passed 120/120. The matrix prints all 17
+  expected-vs-actual records. Observable rows remain honestly
+  `pending_worker`, so the runner now returns non-zero rather than treating
+  unresolved incident expectations as a pass.
+- [follow-up] Complete actual incident observation/comparison for the
+  observable scenario matrix before Task 9 can be finalized and committed.
+
+### 2026-08-04
+
+- [failure] Matrix completion exposed `three_branch_faults`: the generic runner
+  modeled one edge although the preset requires three distinct branches. The
+  first minimal multi-edge run then produced three correct span incidents but
+  still compared as a mismatch because its expected class tuple contained only
+  one `span`.
+- [decision] Select three deterministic, observable registry edges from
+  separate branches of one transformer. Process each 60 simulated seconds
+  apart through the existing public ingest/worker path, so each has its own
+  candidate and incident; represent the expected result as three span classes.
+  Other presets retain the single-edge path.
+- [verification] The new three-branch service regression first failed, then
+  passed. Full simulator tests passed 31/31. After waiting for the restarted
+  web health check, the HTTP runner passed all 17 presets: every observable or
+  limited result matched and firmware-1.2 silence remained explicitly
+  `unobservable`. `git diff --check` passed before the final backend run.
+
+### 2026-08-04
+
+- [failure] A nominal full backend run exceeded its five-minute bound. Bounded
+  `-vv` isolation identified the first blocked test as
+  `test_actionable_candidate_is_promoted_once_by_the_worker`; an interrupt
+  traceback placed it in its initial topology-to-device-assignment SQL query.
+  Earlier interrupted diagnostics left orphaned test connections, which were
+  terminated only after confirming their PostgreSQL session IDs; the web and
+  database containers and persistent volume were left intact.
+- [decision] Add the smallest supporting index,
+  `device_assignments(pole_id, effective_to)`, via Alembic revision `0002`.
+  The existing assignment index begins with `device_id`, while this query joins
+  current assignments by `pole_id` twice.
+- [verification] The formerly timed-out isolated incident regression passed
+  1/1 in 0.83s after the normal `python -m app.seed` Alembic upgrade. Remaining
+  bounded groups and the final full-suite run are still required before Task 9
+  completion.
+
+### 2026-08-04
+
+- [failure] Telemetry helper tests then revealed that their synthetic
+  DT-candidate rows had no evidence IDs, while the Task 9 feeder guard rightly
+  requires two direct messages before treating a DT as a feeder-quorum member.
+- [decision] Keep the production corroboration guard and make the two helper
+  fixtures explicitly qualified with two synthetic evidence IDs; weakening the
+  guard would let silence or a single report manufacture a feeder incident.
+- [verification] Telemetry passed 17/17, incidents 20/20, simulator 31/31,
+  and the final normal backend run passed 133/133 in 42.43s. The 17-scenario
+  HTTP matrix remains fully matched for observable/limited scenarios and marks
+  firmware-1.2 silence as `unobservable`.
+
+### 2026-08-04
+
+- [failure] Independent Task 9 review found the preset names could be reported
+  as matched without proving that a scenario-specific operation occurred, and
+  repair emitted events without processing them through the restoration flow.
+- [decision] Keep the small preset registry, but require each definition to
+  declare concrete effects and persist event/asset evidence for each one.
+  Repair now follows public `accept_payload`, inbox processing, normal ticket
+  transitions, and restoration verification; simulator correlation keys are
+  run-namespaced so a synthetic event cannot append to or roll up a real open
+  incident. Simulator-created schedules use a `sim:<run>:` external ID and
+  reset deletes only their dependent planned operations and schedules.
+- [failure] The first reset cleanup deleted a simulator schedule before its
+  planned-operation FK rows, producing a PostgreSQL foreign-key violation.
+- [verification] RED tests captured missing preset effects, unprocessed repair
+  (`detected` instead of `closed`), absent matrix effect evidence, and the
+  reset leak. Focused repair/effects tests passed after the minimal changes;
+  the full simulator suite passed `34 passed, 1 skipped in 31.52s`.
+
+### 2026-08-05
+
+- [failure] A second independent Task 9 review found that generic event-count
+  flags still let scenario labels stand in for proof, `repair_relapse` did not
+  exercise a real relapse, and a simulator worker pass could evaluate a real
+  candidate against a simulator schedule.
+- [decision] Scope simulator inbox claims, candidate evaluation, restoration,
+  feeder quorum, and schedules by `sim:<run>:` provenance. Preserve the normal
+  global worker behavior when no simulator run is supplied. Record concrete
+  generated IDs and topology/scope/audit facts per preset rather than boolean
+  labels.
+- [output] `repair_relapse` now closes the initial incident through public
+  ingest, worker, workflow, and restoration, then sends increasing-sequence
+  loss telemetry to create a separately linked relapse. The reset/isolation
+  regression protects a pre-existing real candidate, incident, boundary, and
+  evidence row.
+- [verification] Controller source-synced RED was `3 failed, 15 passed, 1
+  skipped`; after the minimal fixes the focused simulator/API suite passed
+  `18 passed, 1 skipped in 26.72s`. `python -m compileall` and `git diff
+  --check` also passed. Fresh-process HTTP and full-backend verification remain
+  controller-owned follow-up.
+
 ## Future Entry Format
 
 ### YYYY-MM-DD

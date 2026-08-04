@@ -15,6 +15,7 @@ class TelemetryPayload(BaseModel):
     firmware: str | None = None
     battery: float | None = Field(default=None, ge=0, le=100)
     rssi: float | None = None
+    simulator_run_id: UUID | None = None
 
     @field_validator("ts")
     @classmethod

@@ -56,6 +56,12 @@ def evaluate_events(
     if now < first + SETTLE_WINDOW:
         return CandidateOutcome("investigating")
     in_window = [event for event in dark if _value(event, "received_at") <= first + HARD_DEADLINE]
+    feeder = classify([], coverage or {})
+    if feeder.kind == "feeder" and len({_value(event, "pole_id") for event in in_window}) >= 2:
+        decision = match_schedule(feeder, schedules, now)
+        if decision.status == "planned":
+            return CandidateOutcome("planned_operation", "planned_outage", defeated_reason="scheduled_match", schedule_decision=decision)
+        return CandidateOutcome("actionable", "feeder", True, schedule_decision=decision)
     if _has_live_child(in_window, events, graph, first, now):
         return CandidateOutcome("device_health", "device_issue", defeated_reason="fresh_live_child")
     if _has_live_parent(in_window, events, graph, first, now) or _has_consistent_pair(in_window, graph) or _has_independent_branches(in_window, graph):
@@ -73,10 +79,13 @@ def evaluate_events(
 def attach_candidate(session: Session, event: TelemetryEvent) -> DetectionCandidate | None:
     """Attach current evidence to the active DT candidate, opening only for dark."""
     pole = session.get(Pole, event.pole_id)
+    run_id = event.payload.get("simulator_run_id")
+    scope_key = f"sim:{run_id}:dt:{pole.transformer_id}" if run_id else f"dt:{pole.transformer_id}"
     candidate = session.scalar(
         select(DetectionCandidate)
         .where(
             DetectionCandidate.transformer_id == pole.transformer_id,
+            DetectionCandidate.scope_key == scope_key,
             DetectionCandidate.status.in_(("investigating", "actionable")),
         )
         .order_by(DetectionCandidate.first_received_at)
@@ -87,7 +96,7 @@ def attach_candidate(session: Session, event: TelemetryEvent) -> DetectionCandid
             return None
         candidate = DetectionCandidate(
             transformer_id=pole.transformer_id,
-            scope_key=f"dt:{pole.transformer_id}",
+            scope_key=scope_key,
             first_received_at=event.received_at,
             expires_at=event.received_at + CANDIDATE_TIMEOUT,
             evidence_event_ids=[str(event.id)],
@@ -114,8 +123,8 @@ def evaluate_candidate(
         schedule_snapshot = schedules if schedules is not None else list(session.scalars(select(ScheduledOutage)))
         coverage = _coverage_for(events, graph, candidate.first_received_at, now)
         base = evaluate_events(events, graph, now, coverage=coverage)
-        if base.classification == "dt":
-            coverage.update(_feeder_coverage(session, candidate.transformer_id, candidate.first_received_at))
+        scope_prefix = candidate.scope_key.rsplit("dt:", 1)[0] or None
+        coverage.update(_feeder_coverage(session, candidate.transformer_id, candidate.first_received_at, scope_prefix))
         outcome = evaluate_events(events, graph, now, coverage=coverage, schedules=schedule_snapshot)
         candidate.status = outcome.candidate_state
         candidate.promotion_outcome = outcome.defeated_reason or (outcome.classification if outcome.actionable else None)
@@ -141,10 +150,11 @@ def evaluate_candidate(
             session.close()
 
 
-def evaluate_open_candidates(session: Session, now: datetime, schedules: Any | None = None) -> None:
-    for candidate_id in session.scalars(
-        select(DetectionCandidate.id).where(DetectionCandidate.status.in_(("investigating", "actionable")))
-    ):
+def evaluate_open_candidates(session: Session, now: datetime, schedules: Any | None = None, scope_key_prefix: str | None = None) -> None:
+    query = select(DetectionCandidate.id).where(DetectionCandidate.status.in_(("investigating", "actionable")))
+    if scope_key_prefix:
+        query = query.where(DetectionCandidate.scope_key.like(f"{scope_key_prefix}%"))
+    for candidate_id in session.scalars(query):
         evaluate_candidate(candidate_id, now, session, schedules)
 
 
@@ -185,7 +195,8 @@ def _has_independent_branches(events: list[Any], graph: NetworkGraph) -> bool:
 def _has_live_parent(dark: list[Any], events: list[Any], graph: NetworkGraph, first: datetime, now: datetime) -> bool:
     live = _live_events(events, first, now)
     return any(
-        _value(candidate, "pole_id") in set(graph.graph.predecessors(_value(event, "pole_id")))
+        _value(event, "pole_id") in graph.graph
+        and _value(candidate, "pole_id") in set(graph.graph.predecessors(_value(event, "pole_id")))
         for event in dark
         for candidate in live
     )
@@ -194,7 +205,8 @@ def _has_live_parent(dark: list[Any], events: list[Any], graph: NetworkGraph, fi
 def _has_live_child(dark: list[Any], events: list[Any], graph: NetworkGraph, first: datetime, now: datetime) -> bool:
     live = _live_events(events, first, now)
     return any(
-        _value(candidate, "pole_id") in set(graph.graph.successors(_value(event, "pole_id")))
+        _value(event, "pole_id") in graph.graph
+        and _value(candidate, "pole_id") in set(graph.graph.successors(_value(event, "pole_id")))
         for event in dark
         for candidate in live
     )
@@ -243,19 +255,24 @@ def _coverage_for(events: list[Any], graph: NetworkGraph, first: datetime, now: 
     return {"dt_branches": {graph.root_id: {"dark": dark, "observable": observable, "live": live}}}
 
 
-def _feeder_coverage(session: Session, transformer_id: UUID, first_received_at: datetime) -> dict[str, dict]:
+def _feeder_coverage(
+    session: Session, transformer_id: UUID, first_received_at: datetime, scope_key_prefix: str | None = None,
+) -> dict[str, dict]:
     feeder_id = session.scalar(select(Transformer.feeder_id).where(Transformer.id == transformer_id))
     transformer_ids = set(session.scalars(select(Transformer.id).where(Transformer.feeder_id == feeder_id)))
-    qualifying = set(session.scalars(
-        select(DetectionCandidate.transformer_id).where(
-            DetectionCandidate.transformer_id.in_(transformer_ids),
-            DetectionCandidate.status == "actionable",
-            DetectionCandidate.promotion_outcome == "dt",
-            DetectionCandidate.first_received_at >= first_received_at,
-            DetectionCandidate.first_received_at <= first_received_at + HARD_DEADLINE,
-        )
-    ))
-    qualifying.add(transformer_id)
+    query = select(DetectionCandidate).where(
+        DetectionCandidate.transformer_id.in_(transformer_ids),
+        DetectionCandidate.status.in_(("investigating", "actionable", "promoted")),
+        DetectionCandidate.first_received_at >= first_received_at,
+        DetectionCandidate.first_received_at <= first_received_at + HARD_DEADLINE,
+    )
+    if scope_key_prefix:
+        query = query.where(DetectionCandidate.scope_key.like(f"{scope_key_prefix}%"))
+    qualifying = {
+        candidate.transformer_id for candidate in session.scalars(
+            query
+        ) if len(candidate.evidence_event_ids) >= 2
+    }
     return {"feeder_dts": {feeder_id: {"qualifying": qualifying, "total": len(transformer_ids)}}}
 
 
@@ -294,6 +311,14 @@ def _promote_candidate(session: Session, candidate: DetectionCandidate, outcome:
         transformer_ids = [item.id for item in transformers]
         assets = [*transformers, *session.scalars(select(Pole).where(Pole.transformer_id.in_(transformer_ids)))]
         boundaries = [BoundaryResult("feeder", None, [], (), None, None, sum(item.affected_count for item in boundaries), True, feeder_id=feeder_id)]
+    elif outcome.classification == "dt":
+        transformer = session.get(Transformer, candidate.transformer_id)
+        poles = list(session.scalars(select(Pole).where(Pole.transformer_id == candidate.transformer_id)))
+        assets = [transformer, *poles]
+        boundaries = [BoundaryResult(
+            "dt", None, [], (), (transformer.latitude, transformer.longitude), None, len(poles), False,
+            transformer.id, feeder_id,
+        )]
     else:
         assets = list(session.scalars(select(Pole).where(Pole.transformer_id == candidate.transformer_id)))
     incidents = []
@@ -318,6 +343,7 @@ def _promote_candidate(session: Session, candidate: DetectionCandidate, outcome:
             navigation_longitude=location.longitude, evidence_ids=[event.id for event in events],
             candidate_spans=[[str(node) for node in boundary.edge]] if boundary.edge else [],
             geometry={"pole_path": [str(node) for node in boundary.pole_path]},
+            simulation_id=UUID(events[0].payload["simulator_run_id"]) if events and events[0].payload.get("simulator_run_id") else None,
         )))
     return incidents
 

@@ -7,6 +7,7 @@ from sqlalchemy.orm import aliased
 from app.db.models.assets import DeviceAssignment, Pole, TopologyEdge, Transformer
 
 from app.db.models.incidents import Incident, IncidentBoundary, IncidentEvidence, TicketEvent
+from app.db.models.simulator import SimulatorRun
 from app.db.models.telemetry import DetectionCandidate, DeviceStreamState, TelemetryEvent
 from app.incidents.correlation import IncidentHypothesis, upsert_incident
 from app.telemetry.ingestion import accept_payload
@@ -86,6 +87,25 @@ def test_feeder_rollup_audits_the_open_dt_incident_without_deleting_it(session):
     event = session.scalar(select(TicketEvent).where(TicketEvent.incident_id == dt.id))
     assert session.get(Incident, dt.id).status == "detected"
     assert event.event_type == "superseded_by_feeder"
+    assert event.reason == f"superseded_by:{feeder.id}"
+
+
+def test_simulated_feeder_rollup_closes_lower_incident_with_audit(session):
+    transformer = session.scalar(select(Transformer).limit(1))
+    run = SimulatorRun(seed=1, scenario="rollup", status="completed", started_at=NOW, finished_at=NOW, truth={})
+    session.add(run)
+    session.flush()
+    lower = upsert_incident(session, _hypothesis(
+        session, fault_class="corridor", feeder_id=transformer.feeder_id, simulation_id=run.id,
+    ))
+    feeder = upsert_incident(session, _hypothesis(
+        session, fault_class="feeder", transformer_id=None, feeder_id=transformer.feeder_id,
+        downstream_pole_id=None, pole_id=None, simulation_id=run.id,
+    ))
+
+    event = session.scalar(select(TicketEvent).where(TicketEvent.incident_id == lower.id))
+    assert session.get(Incident, lower.id).status == "closed"
+    assert (event.event_type, event.from_status, event.to_status) == ("superseded_by_feeder", "detected", "closed")
     assert event.reason == f"superseded_by:{feeder.id}"
 
 

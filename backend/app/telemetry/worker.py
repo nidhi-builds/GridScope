@@ -23,14 +23,19 @@ class BatchResult:
     failed: int = 0
 
 
-def process_inbox_batch(session: Session, limit: int, now: datetime | None = None, schedules=None) -> BatchResult:
-    rows = list(session.scalars(
+def process_inbox_batch(
+    session: Session, limit: int, now: datetime | None = None, schedules=None, simulator_run_id: UUID | None = None,
+) -> BatchResult:
+    query = (
         select(TelemetryEvent)
         .where(TelemetryEvent.processed_at.is_(None), TelemetryEvent.processing_state.in_(("pending", "retry")))
         .order_by(TelemetryEvent.processing_state == "retry", TelemetryEvent.received_at)
         .limit(limit)
         .with_for_update(skip_locked=True)
-    ))
+    )
+    if simulator_run_id:
+        query = query.where(TelemetryEvent.payload["simulator_run_id"].astext == str(simulator_run_id))
+    rows = list(session.scalars(query))
     processed = failed = 0
     for row in rows:
         try:
@@ -47,8 +52,11 @@ def process_inbox_batch(session: Session, limit: int, now: datetime | None = Non
             failed += 1
     if now is not None:
         _expire_evidence(session, now)
-        evaluate_open_candidates(session, now, schedules)
-        evaluate_open_restorations(session, now)
+        if simulator_run_id:
+            evaluate_open_candidates(session, now, schedules, f"sim:{simulator_run_id}:")
+        else:
+            evaluate_open_candidates(session, now, schedules)
+        evaluate_open_restorations(session, now, simulator_run_id)
     session.flush()
     return BatchResult(len(rows), processed, failed)
 
@@ -102,6 +110,7 @@ def _apply_detection(session: Session, row: TelemetryEvent) -> None:
             "device_id": str(evidence.device_id) if evidence.device_id else None,
             "observed_at": evidence.observed_at.isoformat(),
             "pre_fault_live_at": evidence.pre_fault_live_at.isoformat() if evidence.pre_fault_live_at else None,
+            "simulator_run_id": row.payload.get("simulator_run_id"),
         },
     }
     if state_row is None:

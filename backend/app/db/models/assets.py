@@ -83,6 +83,7 @@ class DeviceAssignment(TimestampMixin, Base):
     __tablename__ = "device_assignments"
     __table_args__ = (
         Index("ix_device_assignments_effective", "device_id", "effective_from", "effective_to"),
+        Index("ix_device_assignments_pole_current", "pole_id", "effective_to"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)

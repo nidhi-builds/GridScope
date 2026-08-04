@@ -58,8 +58,49 @@ def _alembic_config_path() -> Path:
     raise FileNotFoundError("alembic.ini not found")
 
 
+def _inferred_edge_rows(network, seed: int) -> list[dict]:
+    pole_ids = {pole.id for pole in network.hidden_poles}
+    hidden_by_id = {pole.id: pole for pole in network.hidden_poles}
+    known_spans = [
+        _distance_m(hidden_by_id[child.parent_id], child)
+        for child in network.hidden_poles
+        if child.parent_id in pole_ids and child.transformer_id not in network.masked_transformer_ids
+    ]
+    rows = []
+    for transformer in network.transformers:
+        if transformer.id not in network.masked_transformer_ids:
+            continue
+        poles = tuple(pole for pole in network.exported_poles if pole.transformer_id == transformer.id)
+        for edge in infer_tree(transformer, poles, known_spans).edges:
+            if edge.parent_id in pole_ids:
+                rows.append({
+                    "id": _id(seed, "inferred-edge", str(edge.child_id)),
+                    "transformer_id": transformer.id,
+                    "parent_pole_id": edge.parent_id,
+                    "child_pole_id": edge.child_id,
+                    "source": "inferred",
+                    "version": 1,
+                    "distance_m": edge.distance_m,
+                    "ambiguity_score": edge.alternative_margin,
+                    "calibration_bucket": edge.calibration_bucket,
+                    "is_visible": True,
+                })
+    return rows
+
+
+def _backfill_inferred_topology(session: Session, seed: int) -> None:
+    """Upgrade only the deterministic demo seed created before inferred edges existed."""
+    if session.scalar(select(TopologyEdge.id).where(TopologyEdge.source == "inferred")):
+        return
+    network = generate_network(seed)
+    if session.get(Substation, network.substations[0].id) is None:
+        return
+    session.execute(insert(TopologyEdge), _inferred_edge_rows(network, seed))
+
+
 def seed_if_empty(session: Session, seed: int) -> SeedSummary:
     if session.scalar(select(func.count()).select_from(Substation)):
+        _backfill_inferred_topology(session, seed)
         return _counts(session)
 
     network = generate_network(seed)
@@ -119,7 +160,6 @@ def seed_if_empty(session: Session, seed: int) -> SeedSummary:
         ],
     )
     edges = []
-    known_spans = []
     for child in network.hidden_poles:
         if child.parent_id not in pole_ids:
             continue
@@ -127,8 +167,6 @@ def seed_if_empty(session: Session, seed: int) -> SeedSummary:
         quarantined = validation is not None and not validation.valid
         visible = exported_by_id[child.id].parent_id is not None and not quarantined
         distance_m = _distance_m(hidden_by_id[child.parent_id], child)
-        if child.transformer_id not in masked_transformers:
-            known_spans.append(distance_m)
         edges.append(
             {
                 "id": _id(seed, "edge", str(child.id)),
@@ -143,28 +181,7 @@ def seed_if_empty(session: Session, seed: int) -> SeedSummary:
                 "is_visible": visible,
             }
         )
-    for transformer in network.transformers:
-        poles = tuple(pole for pole in network.exported_poles if pole.transformer_id == transformer.id)
-        if transformer.id not in masked_transformers:
-            continue
-        tree = infer_tree(transformer, poles, known_spans)
-        for edge in tree.edges:
-            if edge.parent_id not in pole_ids:
-                continue  # TopologyEdge persists pole-to-pole links; the DT root is in-memory only.
-            edges.append(
-                {
-                    "id": _id(seed, "inferred-edge", str(edge.child_id)),
-                    "transformer_id": transformer.id,
-                    "parent_pole_id": edge.parent_id,
-                    "child_pole_id": edge.child_id,
-                    "source": "inferred",
-                    "version": 1,
-                    "distance_m": edge.distance_m,
-                    "ambiguity_score": edge.alternative_margin,
-                    "calibration_bucket": edge.calibration_bucket,
-                    "is_visible": True,
-                }
-            )
+    edges.extend(_inferred_edge_rows(network, seed))
     session.execute(insert(TopologyEdge), edges)
 
     session.execute(

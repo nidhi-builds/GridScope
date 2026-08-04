@@ -29,10 +29,12 @@ class IncidentHypothesis:
     evidence_ids: list[UUID] = field(default_factory=list)
     candidate_spans: list = field(default_factory=list)
     geometry: dict = field(default_factory=dict)
+    simulation_id: UUID | None = None
 
     @property
     def correlation_key(self) -> str:
-        return f"{self.fault_class}:{self.transformer_id or self.feeder_id}:{self.downstream_pole_id or self.pole_id}"
+        key = f"{self.fault_class}:{self.transformer_id or self.feeder_id}:{self.downstream_pole_id or self.pole_id}"
+        return f"sim:{self.simulation_id}:{key}" if self.simulation_id else key
 
 
 def upsert_incident(session: Session, hypothesis: IncidentHypothesis) -> Incident:
@@ -55,6 +57,7 @@ def upsert_incident(session: Session, hypothesis: IncidentHypothesis) -> Inciden
             affected_count=hypothesis.affected_count, confidence=hypothesis.confidence,
             confidence_reasons=hypothesis.confidence_reasons,
             navigation_latitude=hypothesis.navigation_latitude, navigation_longitude=hypothesis.navigation_longitude,
+            simulation_id=hypothesis.simulation_id,
         )
         session.add(incident)
         session.flush()
@@ -108,16 +111,21 @@ def _append_evidence(session: Session, incident: Incident, hypothesis: IncidentH
 def _roll_up(session: Session, feeder: Incident) -> None:
     for incident in session.scalars(
         select(Incident).where(
-            Incident.id != feeder.id, Incident.fault_class == "dt", Incident.feeder_id == feeder.feeder_id,
-            Incident.status != "closed",
+            Incident.id != feeder.id, Incident.fault_class != "feeder", Incident.feeder_id == feeder.feeder_id,
+            Incident.status != "closed", Incident.simulation_id == feeder.simulation_id,
         )
     ):
-        _audit(session, incident, "superseded_by_feeder", f"superseded_by:{feeder.id}")
+        previous_status = incident.status
+        if feeder.simulation_id and incident.simulation_id == feeder.simulation_id:
+            incident.status = "closed"
+        _audit(session, incident, "superseded_by_feeder", f"superseded_by:{feeder.id}", previous_status, incident.status)
         _audit(session, feeder, "rolls_up_dt", f"rolls_up:{incident.id}")
 
 
-def _audit(session: Session, incident: Incident, action: str, reason: str) -> None:
+def _audit(
+    session: Session, incident: Incident, action: str, reason: str, from_status: str | None = None, to_status: str | None = None,
+) -> None:
     session.add(TicketEvent(
-        incident_id=incident.id, event_type=action, from_status=incident.status, to_status=incident.status,
+        incident_id=incident.id, event_type=action, from_status=from_status or incident.status, to_status=to_status or incident.status,
         actor="system", reason=reason, evidence_ids=[], occurred_at=datetime.now(UTC),
     ))

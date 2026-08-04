@@ -82,6 +82,19 @@ def test_candidate_carries_inferred_calibration_gate_to_localization():
     assert outcome.boundaries[0].kind == "corridor"
 
 
+def test_feeder_quorum_with_multiple_direct_dark_reports_survives_missing_local_topology():
+    # Break caught: masked DTs split one feeder outage into corridor incidents.
+    outcome = evaluate_events(
+        [Event("MISSING-1", "power_lost", NOW, False), Event("MISSING-2", "power_lost", NOW, False)],
+        graph=NetworkGraph("DT", []),
+        now=NOW + timedelta(seconds=30),
+        coverage={"feeder_dts": {"F1": {"qualifying": {"DT1", "DT2", "DT3"}, "total": 5}}},
+    )
+
+    assert outcome.actionable is True
+    assert outcome.classification == "feeder"
+
+
 def test_candidate_marks_only_equivalent_dt_schedule_as_planned():
     # Break caught: Tier-2 evidence ignores a telemetry-matching current DT schedule.
     schedule = {"id": "S1", "scope": {"transformer_id": "DT"}, "scheduled_start": NOW, "scheduled_end": NOW + timedelta(hours=1)}

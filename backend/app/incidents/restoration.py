@@ -63,8 +63,11 @@ def evaluate_restoration(session: Session, incident_id: UUID, now: datetime, eve
     return RestorationResult(True, "verified", incident)
 
 
-def evaluate_open_restorations(session: Session, now: datetime) -> None:
-    for incident_id in session.scalars(select(Incident.id).where(Incident.status == "resolved")):
+def evaluate_open_restorations(session: Session, now: datetime, simulation_id: UUID | None = None) -> None:
+    query = select(Incident.id).where(Incident.status == "resolved")
+    if simulation_id is not None:
+        query = query.where(Incident.simulation_id == simulation_id)
+    for incident_id in session.scalars(query):
         evaluate_restoration(session, incident_id, now)
 
 

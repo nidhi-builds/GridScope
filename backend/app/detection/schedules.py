@@ -33,8 +33,8 @@ def match_schedule(classification: FaultClassification, schedules: Any, now: dat
 def _scope_matches(classification: FaultClassification, scope: Any) -> bool:
     transformer_id = _value(scope, "transformer_id")
     feeder_id = _value(scope, "feeder_id")
-    return (classification.kind == "dt" and transformer_id == classification.transformer_id) or (
-        classification.kind == "feeder" and feeder_id == classification.feeder_id
+    return (classification.kind == "dt" and str(transformer_id) == str(classification.transformer_id)) or (
+        classification.kind == "feeder" and str(feeder_id) == str(classification.feeder_id)
     )
 
 

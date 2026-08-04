@@ -58,3 +58,8 @@ def test_unknown_topology_never_claims_an_exact_span():
     result = localize(GRAPH, {"live": {"P2"}, "dark": {"P3"}, "assets": ASSETS, "topology_source": "unknown"})
 
     assert result[0].kind == "corridor"
+
+
+def test_dark_evidence_outside_the_visible_graph_is_not_localized():
+    # Break caught: masked topology can contain a true pole absent from the public graph.
+    assert localize(GRAPH, {"live": {"P2"}, "dark": {"MISSING"}, "assets": ASSETS}) == []

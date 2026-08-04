@@ -10,6 +10,7 @@ from app.api.health import router as health_router
 from app.api.incidents import router as incidents_router
 from app.api.network import router as network_router
 from app.api.operations import router as operations_router
+from app.api.simulator import router as simulator_router
 from app.api.telemetry import router as telemetry_router
 from app.db import engine
 from app.schedules.feed import DatabaseScheduleFeed, ScheduleCache, poll_schedule_feed
@@ -41,6 +42,7 @@ app.include_router(telemetry_router)
 app.include_router(incidents_router)
 app.include_router(network_router)
 app.include_router(operations_router)
+app.include_router(simulator_router)
 
 static_directory = Path("/app/static")
 if static_directory.is_dir():
