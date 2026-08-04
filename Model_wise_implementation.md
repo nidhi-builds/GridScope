@@ -17,7 +17,9 @@
 
 > Current execution override (2026-08-04): use GPT-5.6 Terra with `high`
 > reasoning for every new implementation, fix, and review subagent through
-> Task 6. This overrides the per-task table below for the active session.
+> Task 6. GPT-5.6 Sol is reserved for a genuinely high-stakes task and may be
+> used only after the user's explicit approval. This overrides the per-task
+> table below for the active session.
 
 | Tasks | Model | Reasoning |
 |---|---|---|

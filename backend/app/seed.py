@@ -13,6 +13,8 @@ from app.db import engine
 from app.db.models.assets import Device, DeviceAssignment, Feeder, Pole, Substation, TopologyEdge, Transformer
 from app.domain.types import SeedSummary
 from app.simulator.generator import generate_network
+from app.topology.importer import validate_registry_tree
+from app.topology.inference import infer_tree
 
 _STARTUP_LOCK_ID = 724_202_608_03
 _DEFAULT_SEED = 20260803
@@ -89,6 +91,16 @@ def seed_if_empty(session: Session, seed: int) -> SeedSummary:
     pole_ids = {pole.id for pole in network.hidden_poles}
     exported_by_id = {pole.id: pole for pole in network.exported_poles}
     hidden_by_id = {pole.id: pole for pole in network.hidden_poles}
+    masked_transformers = set(network.masked_transformer_ids)
+    validations = {}
+    for transformer in network.transformers:
+        if transformer.id in masked_transformers:
+            continue
+        poles = tuple(pole for pole in network.exported_poles if pole.transformer_id == transformer.id)
+        validations[transformer.id] = validate_registry_tree(
+            poles,
+            [(pole.parent_id, pole.id) for pole in poles if pole.parent_id is not None],
+        )
     session.execute(
         insert(Pole),
         [
@@ -107,10 +119,16 @@ def seed_if_empty(session: Session, seed: int) -> SeedSummary:
         ],
     )
     edges = []
+    known_spans = []
     for child in network.hidden_poles:
         if child.parent_id not in pole_ids:
             continue
-        visible = exported_by_id[child.id].parent_id is not None
+        validation = validations.get(child.transformer_id)
+        quarantined = validation is not None and not validation.valid
+        visible = exported_by_id[child.id].parent_id is not None and not quarantined
+        distance_m = _distance_m(hidden_by_id[child.parent_id], child)
+        if child.transformer_id not in masked_transformers:
+            known_spans.append(distance_m)
         edges.append(
             {
                 "id": _id(seed, "edge", str(child.id)),
@@ -119,12 +137,34 @@ def seed_if_empty(session: Session, seed: int) -> SeedSummary:
                 "child_pole_id": child.id,
                 "source": "registry" if visible else "hidden_truth",
                 "version": 1,
-                "distance_m": _distance_m(hidden_by_id[child.parent_id], child),
+                "distance_m": distance_m,
                 "ambiguity_score": 0.0,
-                "calibration_bucket": "seeded-truth",
+                "calibration_bucket": "registry_quarantined" if quarantined else "seeded-truth",
                 "is_visible": visible,
             }
         )
+    for transformer in network.transformers:
+        poles = tuple(pole for pole in network.exported_poles if pole.transformer_id == transformer.id)
+        if transformer.id not in masked_transformers:
+            continue
+        tree = infer_tree(transformer, poles, known_spans)
+        for edge in tree.edges:
+            if edge.parent_id not in pole_ids:
+                continue  # TopologyEdge persists pole-to-pole links; the DT root is in-memory only.
+            edges.append(
+                {
+                    "id": _id(seed, "inferred-edge", str(edge.child_id)),
+                    "transformer_id": transformer.id,
+                    "parent_pole_id": edge.parent_id,
+                    "child_pole_id": edge.child_id,
+                    "source": "inferred",
+                    "version": 1,
+                    "distance_m": edge.distance_m,
+                    "ambiguity_score": edge.alternative_margin,
+                    "calibration_bucket": edge.calibration_bucket,
+                    "is_visible": True,
+                }
+            )
     session.execute(insert(TopologyEdge), edges)
 
     session.execute(

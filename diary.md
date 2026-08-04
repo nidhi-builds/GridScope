@@ -210,6 +210,9 @@ decisions, design changes, implementation milestones, or verification results.
 - [decision] The user overrode the prior model routing for the active session:
   every new implementation, fix, and review subagent through Task 6 uses
   GPT-5.6 Terra with `high` reasoning.
+- [decision] Refine the model policy: retain Terra high by default. GPT-5.6
+  Sol is reserved for genuinely important tasks and requires explicit user
+  approval before dispatch.
 - [output] Task 2 added the complete initial PostgreSQL schema, Alembic
   migration, deterministic hidden-truth network generator, corrupted exported
   registry, and advisory-lock-protected idempotent migration/seed startup.
@@ -225,6 +228,19 @@ decisions, design changes, implementation milestones, or verification results.
   confirmed 4,200 persisted poles.
 - [finalized] Task 2 is complete and ready for its own commit and push after
   reconstructing the earlier Task 1 commit required by the latest cadence.
+- [output] Task 3 added registry validation, DT-scoped graph access, sparse
+  geographic MST inference, calibration metrics/gating, and seed integration
+  for inferred topology.
+- [decision] Use virtual transformer roots in memory while persisting only
+  pole-to-pole topology edges. For invalid registry components, retain the full
+  hidden-truth edge set as `hidden_truth`, mark it invisible, and record
+  `calibration_bucket=registry_quarantined`; this keeps truth and quarantine
+  provenance independently auditable without changing the schema.
+- [verification] Task 3 review found bounded-fallback, registry-root,
+  quarantine, and coverage defects. Two TDD fix rounds resolved them. Final
+  scoped review was clean; fresh controller checks passed 15 topology tests
+  and 32 backend tests.
+- [finalized] Task 3 is ready for its individual commit and push.
 
 ## Future Entry Format
 
