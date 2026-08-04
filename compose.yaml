@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:18.3-alpine
+    environment:
+      POSTGRES_DB: gridscope
+      POSTGRES_USER: gridscope
+      POSTGRES_PASSWORD: gridscope
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gridscope -d gridscope"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+  web:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://gridscope:gridscope@db:5432/gridscope
+      APP_ENV: development
+      LOG_LEVEL: INFO
+      SEED: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  frontend-test:
+    image: node:22.14.0-alpine
+    profiles: ["tools"]
+    working_dir: /workspace/frontend
+    volumes:
+      - ./frontend:/workspace/frontend
+    command: sh -c "npm ci && npm test -- --run"
+
+volumes:
+  postgres-data:
