@@ -11,6 +11,7 @@ from app.db import SessionLocal
 from app.db.models.telemetry import DeviceStreamState, PoleEvidenceState, TelemetryEvent
 from app.detection.candidates import attach_candidate, evaluate_open_candidates
 from app.detection.evidence import PoleEvidence, apply_event, expire_heartbeat
+from app.incidents.restoration import evaluate_open_restorations
 from app.schedules.feed import ScheduleSnapshot
 from app.telemetry.stream_state import StreamEvent, StreamState, advance_stream
 
@@ -47,6 +48,7 @@ def process_inbox_batch(session: Session, limit: int, now: datetime | None = Non
     if now is not None:
         _expire_evidence(session, now)
         evaluate_open_candidates(session, now, schedules)
+        evaluate_open_restorations(session, now)
     session.flush()
     return BatchResult(len(rows), processed, failed)
 

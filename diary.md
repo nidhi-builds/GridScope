@@ -404,6 +404,87 @@ decisions, design changes, implementation milestones, or verification results.
 - [finalized] Task 6 feeder-window fix is complete and unstaged for focused
   re-review and controller-owned commit/push.
 
+### 2026-08-04
+
+- [output] Task 7 adds active-boundary incident correlation, immutable incident
+  boundaries/evidence, audited ticket transitions, and telemetry-driven
+  restoration verification.
+- [decision] Reuse the existing incident tables and candidate worker path:
+  promotion changes a candidate to `promoted` after an idempotent upsert, so
+  replay cannot create duplicate active tickets or transition effects. Keep
+  closed incidents immutable; a later matching boundary receives a new active
+  incident through the partial unique correlation key.
+- [failure] The first worker-promotion test exposed UUID values in a JSON
+  candidate-span field. Persist the display representation as strings while
+  retaining UUIDs for relational fields. The restoration worker test then
+  exposed that `energized` lives in telemetry JSON rather than a model column;
+  restoration now uses the same payload fallback as detection.
+- [failure] A final full-suite run exposed an order-dependent promotion test:
+  reused device streams made its fixed sequence stale. The test now selects a
+  deterministic visible registry span whose two device streams are unused,
+  preserving the real worker path without test-order coupling.
+- [verification] TDD began with missing incident-module imports, then a
+  candidate-promotion red test and a restoration-worker red test. Focused
+  Docker checks passed incidents/detection/telemetry 55/55 and the complete
+  backend suite 87/87; `git diff --check` passed.
+- [finalized] Task 7 implementation is complete and left unstaged for
+  independent review and controller-owned commit/push.
+
+### 2026-08-04
+
+- [review-fix] Task 7 review required durable restoration scope, feeder
+  roll-up, protected system transitions, refinement history, and relapse
+  linkage.
+- [decision] Use existing `incident_evidence.evidence` for prior-dark branch
+  scope and immutable `ticket_events` for queryable feeder supersession,
+  location refinement, and relapse links. This preserves all historical rows
+  and avoids a speculative migration. Only boot/power-restored events prove
+  restoration; heartbeat does not. A missing/unknown boundary reporter lowers
+  confidence if another direct restoration report remains, instead of blocking
+  closure indefinitely.
+- [verification] New regressions first failed for all five review findings and
+  the unavailable-reporter edge. Exact Docker checks passed incidents,
+  detection, and telemetry 61/61; full backend 93/93; `git diff --check`
+  passed.
+- [finalized] Task 7 review fixes are complete and remain unstaged for a fresh
+  task-level re-review.
+
+### 2026-08-04
+
+- [review-fix] Final Task 7 review required stability from the final required
+  reporter, boundary-scoped restoration contradictions, real worker feeder
+  identity, and removal of the importable transition authority.
+- [decision] Compute the 30-second restoration window from the latest required
+  boundary/branch boot-or-restored proof and query direct dark telemetry after
+  that time. Restrict proof and contradiction state to the persisted incident
+  boundary subtree and recorded dark branches; unrelated transformer branches
+  cannot block a ticket. Derive feeder identity from the persisted transformer
+  during candidate promotion. Keep verified/closed implementation private to
+  restoration rather than expose a general system-transition function.
+- [verification] New staggered-proof, mid-window-dark, unrelated-branch,
+  real-worker-feeder, and capability tests passed. Exact Docker checks passed
+  incidents/detection/telemetry 65/65 and full backend 97/97; `git diff
+  --check` passed.
+- [finalized] Task 7 final fixes are complete and left unstaged for final
+  independent review.
+
+### 2026-08-04
+
+- [review-fix] Final Task 7 review required one feeder-scoped correlation key
+  for real worker promotion and contradiction gating from credible evidence
+  only.
+- [decision] Feeder promotion now builds a feeder-only hypothesis from persisted
+  transformer/feeder assets, with no DT/pole boundary identity. Restoration
+  ignores raw quarantined, stale/audit-only, or retry messages: a contradiction
+  must be the current `confirmed_dark` state sourced by a processed direct
+  `power_lost` event.
+- [verification] New worker-path feeder and raw-versus-processed dark tests
+  first failed, then passed. Exact Docker checks passed
+  incidents/detection/telemetry 66/66 and full backend 98/98; `git diff
+  --check` passed.
+- [finalized] Task 7 remaining review fixes are complete and left unstaged for
+  re-review.
+
 ## Future Entry Format
 
 ### YYYY-MM-DD

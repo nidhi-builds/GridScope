@@ -12,6 +12,9 @@ from app.db.models.incidents import PlannedOperation, ScheduledOutage
 from app.db.models.telemetry import DetectionCandidate, PoleEvidenceState, TelemetryEvent
 from app.detection.classification import classify
 from app.detection.localization import BoundaryResult, localize
+from app.detection.location import resolve_location
+from app.detection.confidence import score_confidence
+from app.incidents.correlation import IncidentHypothesis, upsert_incident
 from app.detection.schedules import ScheduleDecision, match_schedule
 from app.topology.graph import NetworkGraph
 
@@ -125,6 +128,13 @@ def evaluate_candidate(
             ))
         if outcome.classification == "device_issue":
             _mark_device_suspect(session, events)
+        if outcome.actionable:
+            incidents = _promote_candidate(session, candidate, outcome, events, graph)
+            candidate.status = "promoted"
+            outcome = CandidateOutcome(
+                candidate.status, outcome.classification, True, outcome.defeated_reason, incidents,
+                outcome.boundaries, outcome.schedule_decision,
+            )
         return outcome
     finally:
         if owns_session:
@@ -271,6 +281,45 @@ def _mark_device_suspect(session: Session, events: list[TelemetryEvent]) -> None
         }
         evidence.evidence_class = "device_suspect"
         evidence.device_health = "device_issue"
+
+
+def _promote_candidate(session: Session, candidate: DetectionCandidate, outcome: CandidateOutcome, events: list[TelemetryEvent], graph: NetworkGraph) -> list:
+    boundaries = outcome.boundaries or [BoundaryResult(
+        outcome.classification, None, [], (), None, None, 0, False,
+        candidate.transformer_id, getattr(outcome, "feeder_id", None), None,
+    )]
+    feeder_id = session.get(Transformer, candidate.transformer_id).feeder_id
+    if outcome.classification == "feeder":
+        transformers = list(session.scalars(select(Transformer).where(Transformer.feeder_id == feeder_id)))
+        transformer_ids = [item.id for item in transformers]
+        assets = [*transformers, *session.scalars(select(Pole).where(Pole.transformer_id.in_(transformer_ids)))]
+        boundaries = [BoundaryResult("feeder", None, [], (), None, None, sum(item.affected_count for item in boundaries), True, feeder_id=feeder_id)]
+    else:
+        assets = list(session.scalars(select(Pole).where(Pole.transformer_id == candidate.transformer_id)))
+    incidents = []
+    for boundary in boundaries:
+        location = resolve_location(boundary, assets)
+        if location.latitude is None or location.longitude is None or location.pin_code is None:
+            continue
+        confidence = score_confidence({
+            "topology_source": getattr(graph, "topology_source", "unknown"), "boundary_kind": boundary.kind,
+            "direct_dark_count": sum(_is_dark(event) for event in events), "post_onset_live": any(not _is_dark(event) for event in events),
+        })
+        feeder_scope = outcome.classification == "feeder"
+        incidents.append(upsert_incident(session, IncidentHypothesis(
+            fault_class=outcome.classification or boundary.kind, location_class=boundary.kind,
+            feeder_id=feeder_id, transformer_id=None if feeder_scope else (boundary.transformer_id or candidate.transformer_id),
+            pole_id=None if feeder_scope else boundary.downstream_pole_id,
+            upstream_pole_id=None if feeder_scope else (boundary.edge[0] if boundary.edge else None),
+            downstream_pole_id=None if feeder_scope else boundary.downstream_pole_id,
+            pin_code=location.pin_code, pin_source=location.pin_source,
+            affected_count=boundary.affected_count, confidence=confidence.level,
+            confidence_reasons=list(confidence.reasons), navigation_latitude=location.latitude,
+            navigation_longitude=location.longitude, evidence_ids=[event.id for event in events],
+            candidate_spans=[[str(node) for node in boundary.edge]] if boundary.edge else [],
+            geometry={"pole_path": [str(node) for node in boundary.pole_path]},
+        )))
+    return incidents
 
 
 def _value(event: Any, name: str) -> Any:

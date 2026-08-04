@@ -105,6 +105,10 @@ class TicketEvent(TimestampMixin, Base):
     evidence_ids: Mapped[list] = mapped_column(JSONB, default=list)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
+    @property
+    def action(self) -> str:
+        return self.event_type
+
 
 class AIExplanation(TimestampMixin, Base):
     __tablename__ = "ai_explanations"
