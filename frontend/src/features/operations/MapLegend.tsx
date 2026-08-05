@@ -2,19 +2,22 @@
  * Plain-language legend. An operator should not need to know what "corridor" or
  * "inferred topology" means in the abstract — each row says what it implies for
  * the job in front of them.
+ *
+ * Collapsible, because on a short map the expanded key covers the geography it
+ * is meant to explain. Open by default: a key nobody finds is not a key.
  */
 export function MapLegend() {
-  return <aside className="map-legend" aria-label="Network map legend">
-    <strong>What you are looking at</strong>
+  return <details className="map-legend" open>
+    <summary aria-label="Network map legend">Map key</summary>
     <span className="legend-row"><i className="dot fault" aria-hidden="true" />
-      <b>Fault location</b> — send the crew here</span>
+      <b>Fault location</b><small>send the crew here</small></span>
     <span className="legend-row"><i className="dot pole" aria-hidden="true" />
-      <b>Affected pole</b> — reported no power</span>
+      <b>Affected pole</b><small>reported no power</small></span>
     <span className="legend-row"><i className="dot transformer" aria-hidden="true" />
-      <b>Transformer</b> — feeds the poles below it</span>
+      <b>Transformer</b><small>feeds the poles below</small></span>
     <span className="legend-row"><i className="line exact" aria-hidden="true" />
-      <b>Exact span</b> — the fault is on this stretch of line</span>
+      <b>Exact span</b><small>fault is on this stretch</small></span>
     <span className="legend-row"><i className="line corridor" aria-hidden="true" />
-      <b>Search corridor</b> — fault is somewhere along here, wiring unrecorded</span>
-  </aside>;
+      <b>Search corridor</b><small>wiring unrecorded, search it</small></span>
+  </details>;
 }

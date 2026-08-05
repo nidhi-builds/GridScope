@@ -48,13 +48,19 @@ button, select { font: inherit; }
 .system-health li { padding: .75rem 1rem; background: white; border: 1px solid #dbe3ef; border-radius: .4rem; font-size: .88rem; }
 
 /* Map legend: readable at a glance, in an operator's vocabulary. */
-.map-legend { right: .75rem; bottom: .75rem; max-width: 21rem; padding: .8rem .9rem; gap: .45rem;
-  background: #fff; border: 1px solid #c3cdde; border-radius: .5rem;
-  box-shadow: 0 4px 14px rgb(23 32 51 / .22); font-size: .8rem; line-height: 1.35; }
-.map-legend strong { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #5b687b; }
+/* Compact corner card. Collapsed it is a single chip, so the map stays readable. */
+.map-legend { right: .6rem; bottom: .6rem; width: 13.5rem; display: block; padding: 0;
+  background: #fff; border: 1px solid #c3cdde; border-radius: .4rem;
+  box-shadow: 0 2px 10px rgb(23 32 51 / .2); font-size: .72rem; line-height: 1.25; }
+.map-legend summary { cursor: pointer; padding: .4rem .55rem; font-size: .68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em; color: #5b687b; user-select: none; }
+.map-legend[open] summary { border-bottom: 1px solid #e5eaf2; margin-bottom: .35rem; }
+.map-legend[open] { padding-bottom: .45rem; }
 .map-legend span::before { content: none; }
-.legend-row { display: grid; grid-template-columns: 1.6rem 1fr; align-items: center; gap: .1rem; }
-.legend-row b { font-weight: 700; }
+.legend-row { display: grid; grid-template-columns: 1.4rem 1fr; align-items: center;
+  column-gap: .2rem; padding: .1rem .55rem; }
+.legend-row b { font-weight: 700; color: #172033; }
+.legend-row small { grid-column: 2; color: #5b687b; font-size: .66rem; }
 .map-legend .dot { display: inline-block; border-radius: 50%; justify-self: center; }
 .map-legend .dot.fault { width: .95rem; height: .95rem; background: #c32929; border: 3px solid #7d1414; }
 .map-legend .dot.pole { width: .55rem; height: .55rem; background: #c32929; opacity: .6; border: 1px solid #c32929; }
