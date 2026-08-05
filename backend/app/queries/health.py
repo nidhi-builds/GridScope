@@ -25,7 +25,8 @@ def list_planned_operations(session: Session, page: int, page_size: int) -> tupl
     total = session.scalar(select(func.count()).select_from(statement.subquery())) or 0
     rows = session.execute(statement.order_by(PlannedOperation.updated_at.desc()).offset((page - 1) * page_size).limit(page_size))
     return [{
-        "id": str(operation.id), "status": operation.status, "scope": outage.scope,
+        "id": str(operation.id), "incident_id": str(operation.incident_id) if operation.incident_id else None,
+        "status": operation.status, "scope": outage.scope,
         "scheduled_start": outage.scheduled_start, "scheduled_end": outage.scheduled_end,
         "observed_start": operation.observed_start, "observed_end": operation.observed_end,
         "snapshot_stale": outage.snapshot_stale, "promotion_outcome": operation.promotion_outcome,

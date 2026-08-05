@@ -668,6 +668,58 @@ decisions, design changes, implementation milestones, or verification results.
   --check` also passed. Fresh-process HTTP and full-backend verification remain
   controller-owned follow-up.
 
+### 2026-08-05
+
+- [output] Task 11 adds the `/operations` operator workspace: compact shell,
+  status/backlog state, typed abortable API access, visibility-aware three-second
+  polling, sortable/filterable incident queue, selected-only incident geometry,
+  Leaflet map, and an explicit network-state legend.
+- [decision] Do not fetch the full pole network on initial render. The overview
+  loads only the first incidents page plus count-only planned/device pages;
+  geometry is requested only after the operator selects an incident. During a
+  transient failure the workspace retains the last successful data and shows
+  its staleness rather than clearing the console.
+- [failure] The frontend has no DOM-test dependency and the task prohibits
+  adding one. The first RED Docker run therefore failed at the intentionally
+  absent queue module; the focused test uses existing Vitest and React server
+  rendering to verify queue prioritization and accessible selected-row markup.
+- [verification] RED: `Cannot find module
+  ../src/features/operations/IncidentQueue`. GREEN: focused frontend test
+  passed `1 passed`; full frontend test run passed `1 passed`; TypeScript/Vite
+  production build passed. `graphify update .` rebuilt the AST graph and
+  `git diff --check` passed.
+
+### 2026-08-05
+
+- [review-fix] Direct `/operations` requests now fall back to the built SPA
+  without masking missing API paths. The planned-incident filter was removed:
+  the available compact list has no per-incident planned-operation relation,
+  so a control could not truthfully filter it.
+- [review-fix] Selected geometry is cleared and keyed to its incident ID;
+  an aborted older request cannot draw on a newly selected incident. The map
+  legend uses solid registry, dashed inferred, and thick selected-boundary
+  line symbols.
+- [failure] The first SPA fallback caught FastAPI's subclass while Starlette
+  raised its base HTTP exception. The deep-link test remained 404 until the
+  correct exception type was caught. Removing the React-Leaflet declaration
+  shim also failed its library type-check, so it remains with a scoped reason.
+- [verification] RED: the direct `/operations` static-host test returned 404.
+  GREEN: static routing/readiness API regressions passed `3 passed`; focused
+  and complete frontend tests passed `5 passed`; production Vite output was
+  generated, and `git diff --check` passed.
+- [review-fix] The SPA guard now also preserves a 404 for `/api`. Planned-work
+  filtering uses only `planned_operations.incident_id`, exposed by the existing
+  API payload; it does not infer a relationship from a schedule scope.
+- [verification] A jsdom-rendered queue-click regression verifies selected-only
+  geometry fetch and map selection. Clean-container frontend tests passed `8
+  passed`; clean-container Vite build passed; focused static/operations API
+  tests passed `6 passed`. A first backend run failed only because its disposable
+  container was outside the compose network; rerunning on `gridscope_default`
+  resolved the test database and passed.
+- [failure] `graphify update .` could not rebuild because Windows held a graph
+  file lock (`WinError 5`). Source, focused tests, and the committed graph inputs
+  are unaffected; retry on the next task after the editor releases the lock.
+
 ## Future Entry Format
 
 ### YYYY-MM-DD

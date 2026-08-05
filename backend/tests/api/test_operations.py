@@ -1,7 +1,9 @@
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy import select
 
 from app.db.models.assets import Pole, Transformer
-from app.db.models.incidents import Incident
+from app.db.models.incidents import Incident, PlannedOperation, ScheduledOutage
 
 
 def test_secondary_views_are_paginated_and_incident_geometry_is_geojson(client, seeded_incident):
@@ -13,6 +15,22 @@ def test_secondary_views_are_paginated_and_incident_geometry_is_geojson(client, 
     assert set(planned.json()) == {"items", "page", "page_size", "total"}
     assert geometry.json()["type"] == "FeatureCollection"
     assert geometry.json()["features"]
+
+
+def test_planned_operations_expose_only_their_existing_incident_link(client, session, seeded_incident):
+    now = datetime.now(UTC)
+    outage = ScheduledOutage(
+        external_id=f"test-operation:{seeded_incident.id}", scope={}, scheduled_start=now,
+        scheduled_end=now + timedelta(hours=1), source_updated_at=now,
+    )
+    session.add(outage)
+    session.flush()
+    session.add(PlannedOperation(scheduled_outage_id=outage.id, incident_id=seeded_incident.id, status="matched_evidence"))
+    session.flush()
+
+    operation = client.get("/api/v1/planned-operations?page=1&page_size=25").json()["items"][0]
+
+    assert operation["incident_id"] == str(seeded_incident.id)
 
 
 def test_network_geometry_expands_transformer_and_feeder_asset_scopes(client, session):
