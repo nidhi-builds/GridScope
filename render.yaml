@@ -1,0 +1,48 @@
+# Render blueprint. Deploys the same Docker image that `docker compose up` runs.
+#
+# One web service and one managed PostgreSQL database. Exactly one Uvicorn
+# process: the inbox worker and the schedule poller run inside it and must have
+# a single owner.
+services:
+  - type: web
+    name: gridscope
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    healthCheckPath: /api/v1/health
+    # $PORT is assigned by Render. Migrations and seeding run through the same
+    # startup command used locally, so a deploy cannot skip them.
+    dockerCommand: sh -c "python -m app.seed && exec uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: gridscope-db
+          property: connectionString
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SEED
+        value: "true"
+      - key: POLL_INTERVAL_MS
+        value: "3000"
+      - key: WORKER_BATCH_SIZE
+        value: "100"
+      # Free-tier PostgreSQL allows far fewer connections than a local instance.
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: DB_MAX_OVERFLOW
+        value: "10"
+      - key: REQUEST_THREAD_LIMIT
+        value: "40"
+      # Optional. Left unset, incident explanations use the deterministic fallback.
+      - key: GEMINI_API_KEY
+        sync: false
+
+databases:
+  - name: gridscope-db
+    plan: free
+    region: singapore
+    databaseName: gridscope
+    user: gridscope

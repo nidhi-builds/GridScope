@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +21,18 @@ class Settings(BaseSettings):
     request_thread_limit: int = 80
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @field_validator("database_url")
+    @classmethod
+    def use_psycopg_driver(cls, value: str) -> str:
+        """Hosted PostgreSQL hands out postgres:// URLs; SQLAlchemy needs the driver."""
+        for prefix in ("postgresql+psycopg://", "postgresql+psycopg2://"):
+            if value.startswith(prefix):
+                return value
+        for prefix in ("postgresql://", "postgres://"):
+            if value.startswith(prefix):
+                return f"postgresql+psycopg://{value[len(prefix):]}"
+        return value
 
 
 @lru_cache
