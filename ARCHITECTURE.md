@@ -329,6 +329,13 @@ binding cost is the 5-second timeout, not the money.
 malformed JSON, protected-fact mismatch, any unexpected exception — falls back to
 a deterministic template built from the same facts. The UI labels it
 `Deterministic fallback`, or `Explanation unavailable` if even that is missing,
-and every other part of the incident stays fully usable. The system currently
-runs with **no API key configured**, which means the fallback path is the one
-exercised in the demo — by design, so the reviewer sees the degraded state work.
+and every other part of the incident stays fully usable.
+
+**Key ownership.** The deployed instance carries its own `GEMINI_API_KEY`, set as
+an environment variable on the host and never committed — `render.yaml` declares
+the variable with `sync: false`, so the blueprint knows it exists but never
+carries its value. The call is made server-side; the key never reaches the
+browser and never appears in an API response. **A reviewer needs no key of their
+own**, for this or for the map, which uses OpenStreetMap tiles. Running locally
+without a key is fully supported and exercises the deterministic fallback, which
+is visible in `/api/v1/ready` as `"ai": "unconfigured"`.

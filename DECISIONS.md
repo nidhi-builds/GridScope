@@ -144,8 +144,9 @@ the model must echo back unchanged. Any mismatch discards the response.
 language model is none of those. The real friction is that the output is dense
 and the crew lead may not read English comfortably. Translation and phrasing are
 what these models are genuinely good at. Every failure path falls back to a
-deterministic template, and the system currently runs with no API key configured
-so the fallback is what the demo exercises.
+deterministic template. The deployed instance carries its own key, set as an
+environment variable and never committed, so a reviewer needs no key of their
+own. Running locally without one is fully supported and exercises the fallback.
 
 ---
 
