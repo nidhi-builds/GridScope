@@ -32,11 +32,12 @@ def test_ingest_concurrency_is_configured_above_the_library_defaults(client):
 
     settings = Settings(_env_file=None)
 
-    assert settings.db_pool_size >= 20
-    assert settings.db_max_overflow >= 40
+    assert settings.db_pool_size > 5  # above SQLAlchemy's stock pool_size
+    assert settings.db_max_overflow > 10  # above SQLAlchemy's stock max_overflow
     assert settings.request_thread_limit >= 80
-    # Stay clear of PostgreSQL's default max_connections of 100.
-    assert settings.db_pool_size + settings.db_max_overflow < 100
+    # Two processes must be able to hold a full pool at once: the application
+    # plus a test runner or measurement container, inside max_connections of 100.
+    assert (settings.db_pool_size + settings.db_max_overflow) * 2 < 100
     assert engine.pool.size() == get_settings().db_pool_size
     # Asserted from the running app, so it proves the limiter was raised in the
     # event loop that actually serves requests.
