@@ -743,6 +743,257 @@
           }
         }
       }
+    },
+    "/api/v1/simulator/scenarios": {
+      "get": {
+        "tags": [
+          "simulator"
+        ],
+        "summary": "List Scenarios",
+        "operationId": "list_scenarios_api_v1_simulator_scenarios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response List Scenarios Api V1 Simulator Scenarios Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulator/runs": {
+      "post": {
+        "tags": [
+          "simulator"
+        ],
+        "summary": "Create Run",
+        "operationId": "create_run_api_v1_simulator_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRun"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Run Api V1 Simulator Runs Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulator/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "simulator"
+        ],
+        "summary": "Get Run",
+        "operationId": "get_run_api_v1_simulator_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Run Api V1 Simulator Runs  Run Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulator/runs/{run_id}/events": {
+      "get": {
+        "tags": [
+          "simulator"
+        ],
+        "summary": "Run Events",
+        "description": "Replay the run's own generated events with the delivery outcome ingest recorded.",
+        "operationId": "run_events_api_v1_simulator_runs__run_id__events_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulator/runs/{run_id}/repair": {
+      "post": {
+        "tags": [
+          "simulator"
+        ],
+        "summary": "Repair",
+        "operationId": "repair_api_v1_simulator_runs__run_id__repair_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Repair Api V1 Simulator Runs  Run Id  Repair Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulator/reset": {
+      "post": {
+        "tags": [
+          "simulator"
+        ],
+        "summary": "Reset",
+        "operationId": "reset_api_v1_simulator_reset_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Reset Api V1 Simulator Reset Post"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -852,6 +1103,10 @@
             "type": "string",
             "title": "Worker"
           },
+          "ai": {
+            "type": "string",
+            "title": "Ai"
+          },
           "last_processed_at": {
             "anyOf": [
               {
@@ -885,11 +1140,35 @@
           "database",
           "seed",
           "worker",
+          "ai",
           "last_processed_at",
           "unprocessed_count",
           "oldest_backlog_age_seconds"
         ],
         "title": "ReadyResponse"
+      },
+      "StartRun": {
+        "properties": {
+          "scenario_key": {
+            "type": "string",
+            "title": "Scenario Key"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 20260803
+          },
+          "overrides": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Overrides"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scenario_key"
+        ],
+        "title": "StartRun"
       },
       "TelemetryPayload": {
         "properties": {
@@ -961,6 +1240,18 @@
               }
             ],
             "title": "Rssi"
+          },
+          "simulator_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Simulator Run Id"
           }
         },
         "type": "object",
