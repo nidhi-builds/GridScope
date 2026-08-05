@@ -1,4 +1,4 @@
-import type { DeviceHealth, FeatureCollection, IncidentDetail, IncidentSummary, OperationsData, Page, PlannedOperation, Readiness, TicketActionResponse } from "./types";
+import type { DeviceHealth, FeatureCollection, IncidentDetail, IncidentSummary, OperationsData, Page, PlannedOperation, Readiness, SimulatorEvent, SimulatorRun, SimulatorScenario, TicketActionResponse } from "./types";
 
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string) {
@@ -34,6 +34,50 @@ export function loadIncidentGeometry(incidentId: string, signal?: AbortSignal): 
 
 export function loadIncident(incidentId: string, signal?: AbortSignal): Promise<IncidentDetail> {
   return request<IncidentDetail>(`/incidents/${encodeURIComponent(incidentId)}`, signal);
+}
+
+export function loadReadiness(signal?: AbortSignal): Promise<Readiness> {
+  return request<Readiness>("/ready", signal);
+}
+
+export function loadPlannedOperations(signal?: AbortSignal): Promise<Page<PlannedOperation>> {
+  return request<Page<PlannedOperation>>("/planned-operations?page=1&page_size=100", signal);
+}
+
+export function loadDeviceHealth(signal?: AbortSignal): Promise<Page<DeviceHealth>> {
+  return request<Page<DeviceHealth>>("/device-health?page=1&page_size=100", signal);
+}
+
+export function loadScenarios(signal?: AbortSignal): Promise<SimulatorScenario[]> {
+  return request<SimulatorScenario[]>("/simulator/scenarios", signal);
+}
+
+export function loadRunEvents(runId: string, signal?: AbortSignal): Promise<Page<SimulatorEvent>> {
+  return request<Page<SimulatorEvent>>(`/simulator/runs/${encodeURIComponent(runId)}/events?page=1&page_size=200`, signal);
+}
+
+async function post<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(`${baseUrl}/api/v1${path}`, {
+    method: "POST", headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const failure = await response.json().catch(() => null) as { detail?: string } | null;
+    throw new ApiError(response.status, failure?.detail ?? `Request failed (${response.status})`);
+  }
+  return response.json() as Promise<T>;
+}
+
+export function startRun(scenarioKey: string, seed: number): Promise<SimulatorRun> {
+  return post<SimulatorRun>("/simulator/runs", { scenario_key: scenarioKey, seed });
+}
+
+export function repairRun(runId: string): Promise<SimulatorRun> {
+  return post<SimulatorRun>(`/simulator/runs/${encodeURIComponent(runId)}/repair`);
+}
+
+export function resetRuns(): Promise<{ status: string }> {
+  return post<{ status: string }>("/simulator/reset");
 }
 
 export async function ticketAction(incidentId: string, action: "acknowledge" | "assign" | "report-resolved"): Promise<TicketActionResponse> {

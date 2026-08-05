@@ -742,6 +742,52 @@ decisions, design changes, implementation milestones, or verification results.
 - [verification] Clean-container incident-detail tests passed `4 passed` and
   TypeScript/Vite production build passed. `git diff --check` passed. Independent
   release review found no blocker.
+- [output] Task 13 adds the `Demo` simulator view and the three secondary
+  operational views: `/simulator`, `/planned-operations`, `/device-health`, and
+  `/system-health`. `App.tsx` routes on `window.location.pathname` and the icon
+  rail now carries text labels beside each icon, so no router dependency was
+  added.
+- [decision] The simulator view drives only the public Task 9 endpoints. Hidden
+  ground truth, de-energized pole counts, and generated-event replay are shown
+  in this route alone, under an explicit `Demo view` banner, and every generated
+  incident link is labelled with its simulator run ID as PRD section 12.4
+  requires. An unobservable scenario renders `Unobservable by design` and never
+  the mismatch wording, so an expected silence cannot read as a detection
+  failure.
+- [decision] Four narrow read-only backend additions were required because the
+  Task 13 UI had no honest data source for them; no schema or write path
+  changed. `readiness` now reports `ai` from the configured Gemini key.
+  `list_planned_operations` returns `end_grace_minutes` and `source_updated_at`.
+  `list_device_health` returns `mismatch_events` and `stale_replay_events`,
+  counted only for the requested page so the ingest table is never scanned
+  whole. `GET /simulator/runs/{id}/events` replays a run's own recorded events,
+  keyed off `run.truth.event_ids` rather than a JSONB scan, and the run payload
+  now carries `incident_ids`.
+- [decision] Per-device duplicate rate was not invented. Exact duplicates are
+  rejected at ingest by fingerprint and are never persisted, so no honest
+  per-device figure exists. The device-health view states this directly, and the
+  simulator view reports the duplicate deliveries the run itself recorded.
+- [failure] `git diff --check` reports trailing whitespace across `.env.example`,
+  `Dockerfile`, `Model_wise_implementation.md`, `backend/app/config.py`, and
+  `backend/tests/test_health.py`. These are pre-existing CRLF-only working-tree
+  edits from before Task 13; they were left unstaged. Restricted to the Task 13
+  paths, `git diff --check` passes.
+- [failure] Vitest reports one unhandled error from `tests/operations.test.tsx`
+  (`detail.boundary` undefined in `IncidentDetail`). It reproduces unchanged on
+  `HEAD` (`1feefa5`), so it is pre-existing Task 12 test-fixture noise, not a
+  Task 13 regression. The fixture returns an incident detail without a boundary;
+  the real API always sends one. Left unchanged to keep Task 13 narrow.
+- [failure] Backend pytest could not run in this environment: no Docker daemon
+  and no PostgreSQL, so `gridscope_default` was unavailable. The backend changes
+  were kept to additive read-only serializer fields and compile-checked only.
+  Existing readiness tests assert key subsets, so the new `ai` field does not
+  break them.
+- [verification] Clean Linux install (`npm ci`, Node 22): new
+  `tests/simulator.test.tsx` `4 passed` and `tests/health-pages.test.tsx`
+  `5 passed`; full frontend suite `21 passed` across 4 files; `npm run build`
+  (`tsc -b && vite build`) passed with no TypeScript errors.
+- [follow-up] Re-run the backend suite on the Windows host with Docker up:
+  `test_readiness.py`, `test_operations.py`, and the simulator API tests.
 
 ## Future Entry Format
 

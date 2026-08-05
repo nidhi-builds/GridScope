@@ -36,6 +36,7 @@ class ReadyResponse(BaseModel):
     database: str
     seed: str
     worker: str
+    ai: str
     last_processed_at: datetime | None
     unprocessed_count: int
     oldest_backlog_age_seconds: int | None
