@@ -92,6 +92,15 @@ describe("operator workspace", () => {
     expect(html).toContain("registry");
     expect(html).toContain("inferred");
   });
+
+  it("reaches the API-unavailable state instead of loading forever on a cold-start failure", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("Failed to fetch"));
+
+    render(<OperationsPage />);
+
+    expect(await screen.findByText("API unavailable")).toBeTruthy();
+    expect(screen.queryByText("Loading operations")).toBeNull();
+  });
 });
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });

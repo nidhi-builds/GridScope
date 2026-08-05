@@ -14,7 +14,10 @@ export function useVisiblePolling<T>(load: (signal: AbortSignal) => Promise<T>, 
       if (!next.signal.aborted) setState({ data, updatedAt: new Date(), loading: false });
     }).catch((error: Error) => {
       if (error.name !== "AbortError" && !next.signal.aborted) {
-        setState((current) => ({ ...current, error, loading: !current.data }));
+        // The attempt finished, unsuccessfully. Staying in `loading` here left the
+        // cold-start failure stuck on the loading panel and made the
+        // API-unavailable state unreachable.
+        setState((current) => ({ ...current, error, loading: false }));
       }
     });
   }, [load]);
