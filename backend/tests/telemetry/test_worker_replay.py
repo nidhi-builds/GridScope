@@ -4,6 +4,7 @@ from uuid import uuid4
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, aliased
 
+from app.config import get_settings
 from app.db import SessionLocal, engine
 from app.db.models.assets import DeviceAssignment, Pole, TopologyEdge, Transformer
 from app.db.models.telemetry import DetectionCandidate, DeviceStreamState, PoleEvidenceState, TelemetryEvent
@@ -395,3 +396,35 @@ def test_worker_never_runs_its_batch_on_the_event_loop(monkeypatch):
     asyncio.run(run_worker(stop))
 
     assert observed["worker_thread"] != threading.get_ident()
+
+
+def test_worker_keeps_draining_while_batches_come_back_full(monkeypatch):
+    """Sleeping the poll interval after a full batch capped drain at one batch per
+    3s, leaving 11,161 events unprocessed 60s after a 60s load run."""
+    import asyncio
+
+    from app.telemetry.worker import BatchResult
+
+    stop = asyncio.Event()
+    batch_size = get_settings().worker_batch_size
+    claimed_per_call = [batch_size, batch_size, 0]
+    slept: list[float] = []
+
+    def fake_batch(session, limit, now=None, schedules=None, simulator_run_id=None):
+        remaining = claimed_per_call.pop(0)
+        if not claimed_per_call:
+            stop.set()
+        return BatchResult(claimed=remaining, processed=remaining, failed=0)
+
+    async def fake_wait_for(awaitable, timeout):
+        slept.append(timeout)
+        awaitable.close()
+        raise TimeoutError
+
+    monkeypatch.setattr(worker_module, "process_inbox_batch", fake_batch)
+    monkeypatch.setattr(worker_module.asyncio, "wait_for", fake_wait_for)
+    asyncio.run(run_worker(stop))
+
+    # Two full batches ran back to back; only the empty batch waited.
+    assert claimed_per_call == []
+    assert slept == [get_settings().poll_interval_ms / 1000]

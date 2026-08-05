@@ -31,6 +31,20 @@ Accuracy gates — exact-span precision >=95%, inferred precision by bucket,
 corridor containment >=95%, and zero false tickets on noise-only runs — come
 from `measure_accuracy.py` into `accuracy.json`.
 
+## Order matters
+
+The load tests deliberately pollute the database — `sustained.js` alone persists
+around 30,000 telemetry events, which the worker then turns into evidence states
+and detection candidates. Several backend tests assume a near-clean database and
+will fail afterwards. Run correctness first, load second, and reset in between:
+
+```powershell
+docker compose down -v      # destroys the database volume
+docker compose up -d --build
+```
+
+The seed is deterministic, so a reset always rebuilds the same network.
+
 ## Commands
 
 ```powershell

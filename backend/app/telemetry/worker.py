@@ -159,13 +159,13 @@ def _expire_evidence(session: Session, now: datetime) -> None:
         }
 
 
-def _drain_once(batch_size: int, schedule_cache=None) -> None:
+def _drain_once(batch_size: int, schedule_cache=None) -> BatchResult:
     with SessionLocal.begin() as session:
         now = datetime.now(UTC)
         schedules = schedule_cache.current if schedule_cache else None
         if schedule_cache and schedules is None:
             schedules = ScheduleSnapshot((), now, stale=True)
-        process_inbox_batch(session, batch_size, now, schedules)
+        return process_inbox_batch(session, batch_size, now, schedules)
 
 
 async def run_worker(stop: asyncio.Event, schedule_cache=None) -> None:
@@ -174,7 +174,12 @@ async def run_worker(stop: asyncio.Event, schedule_cache=None) -> None:
         # The batch is blocking database work. Running it directly on the event
         # loop froze every in-flight request for the length of each batch, which
         # capped sustained ingest far below what the database can absorb.
-        await asyncio.to_thread(_drain_once, settings.worker_batch_size, schedule_cache)
+        result = await asyncio.to_thread(_drain_once, settings.worker_batch_size, schedule_cache)
+        # A full batch means the inbox still has work. Sleeping the poll interval
+        # anyway capped drain at one batch per interval, so a burst took minutes
+        # to clear while thousands of events sat unprocessed.
+        if result is not None and result.claimed >= settings.worker_batch_size:
+            continue
         try:
             await asyncio.wait_for(stop.wait(), timeout=settings.poll_interval_ms / 1000)
         except TimeoutError:
