@@ -47,7 +47,7 @@ def _truth_edge(run: dict) -> list[str] | None:
 
 def _accuracy_pass(runs: int, seed_base: int) -> dict:
     scenarios = EXACT + INFERRED + CORRIDOR + SCOPE
-    exact_attempts = exact_hits = 0
+    exact_attempts = exact_hits = unverifiable = 0
     corridor_attempts = corridor_hits = 0
     inferred_exact_outputs = 0
     degraded = candidates = 0
@@ -78,8 +78,14 @@ def _accuracy_pass(runs: int, seed_base: int) -> dict:
                     inferred_exact_outputs += 1
 
             if kind == "span":
+                # Only scenarios that publish a target edge can be scored. Counting
+                # unknown-truth runs as misses put exact-span precision at 0.36 when
+                # every scorable run was in fact correct.
+                if not truth_edge:
+                    unverifiable += 1
+                    continue
                 exact_attempts += 1
-                if truth_edge and endpoints == set(truth_edge):
+                if endpoints == set(truth_edge):
                     exact_hits += 1
                 else:
                     misses.append({"scenario": scenario, "seed": seed, "reason": "span endpoints differ from truth",
@@ -105,7 +111,9 @@ def _accuracy_pass(runs: int, seed_base: int) -> dict:
         return None if attempts == 0 else hits / attempts
 
     return {
-        "exact_span": {"attempts": exact_attempts, "hits": exact_hits, "precision": ratio(exact_hits, exact_attempts), "gate": 0.95},
+        "exact_span": {"attempts": exact_attempts, "hits": exact_hits, "precision": ratio(exact_hits, exact_attempts), "gate": 0.95,
+                       "unscorable_runs": unverifiable,
+                       "unscorable_note": "scenarios whose effect evidence publishes no target edge, so correctness cannot be judged"},
         "corridor_containment": {"attempts": corridor_attempts, "hits": corridor_hits, "containment": ratio(corridor_hits, corridor_attempts), "gate": 0.95},
         "inferred_exact_output_count": inferred_exact_outputs,
         "inferred_exact_output_disabled": inferred_exact_outputs == 0,
