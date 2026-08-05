@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { loadRunEvents, loadScenarios, repairRun, resetRuns, startRun } from "../../api/client";
+import { loadRun, loadRunEvents, loadScenarios, repairRun, resetRuns, startRun } from "../../api/client";
 import type { SimulatorEvent, SimulatorRun, SimulatorScenario } from "../../api/types";
 import { AppShell } from "../../components/AppShell";
 import { StatePanel } from "../../components/StatePanel";
@@ -8,6 +8,8 @@ import { RunComparison } from "./RunComparison";
 import { ScenarioControls } from "./ScenarioControls";
 
 const DEFAULT_SEED = 20260803;
+// Navigation is a full page load, so the run has to survive leaving this route.
+const LAST_RUN = "gridscope.simulator.last-run";
 
 export function SimulatorPage() {
   const [scenarios, setScenarios] = useState<SimulatorScenario[]>([]);
@@ -28,8 +30,20 @@ export function SimulatorPage() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const previous = sessionStorage.getItem(LAST_RUN);
+    if (!previous) return;
+    const controller = new AbortController();
+    void loadRun(previous, controller.signal)
+      .then(async (restored) => { if (!controller.signal.aborted) await withEvents(restored); })
+      .catch(() => sessionStorage.removeItem(LAST_RUN));
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const withEvents = async (next: SimulatorRun) => {
     setRun(next);
+    sessionStorage.setItem(LAST_RUN, next.id);
     setEvents((await loadRunEvents(next.id).catch(() => undefined))?.items ?? []);
   };
 
@@ -49,6 +63,7 @@ export function SimulatorPage() {
   const onRepair = () => void guard(async () => run && withEvents(await repairRun(run.id)), "The repair could not be applied.");
   const onReset = () => void guard(async () => {
     await resetRuns();
+    sessionStorage.removeItem(LAST_RUN);
     setRun(undefined);
     setEvents([]);
     setMessage("Seed state restored; simulator runs were cleared.");

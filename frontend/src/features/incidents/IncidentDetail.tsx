@@ -50,6 +50,9 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
     <h3>Evidence</h3><p>{Object.entries(detail.evidence.class_counts).map(([kind, count]) => `${count} ${kind.replaceAll("_", " ")}`).join(" / ") || "No evidence"}</p><ul>{detail.evidence.items.map((event) => <li key={event.id}>{event.event_type ?? event.class}: {JSON.stringify(event.details)}</li>)}</ul>
     <h3>Ticket history</h3><ul>{detail.ticket_events.map((event) => <li key={event.id}>{event.occurred_at}: {event.reason}</li>)}</ul>
     {action && <button onClick={repair}>{action.label}</button>}{message && <p role="alert">{message}</p>}
+    {detail.status === "resolved" && <p>Repair reported. Awaiting restoration telemetry — the ticket closes itself once the affected poles report live and stay live for 30 seconds. There is no manual close.</p>}
+    {detail.status === "verified" && <p>Restoration verified from telemetry. Closing.</p>}
+    {detail.status === "closed" && <p>Closed on restoration telemetry, not on an operator claim.</p>}
     <h3>Explanation</h3>{detail.ai_explanation ? <><p>{detail.ai_explanation.status === "fallback" ? "Deterministic fallback" : "Generated explanation"}</p><button aria-pressed={language === "english"} onClick={() => setLanguage("english")}>English</button><button aria-pressed={language === "kannada"} onClick={() => setLanguage("kannada")}>Kannada</button><p>{detail.ai_explanation.text[language]}</p><p>AI explanation cannot change incident facts or ticket status.</p></> : <><p>Explanation unavailable</p><p>AI explanation cannot change incident facts or ticket status.</p></>}
   </aside>;
 }

@@ -52,6 +52,10 @@ export function loadScenarios(signal?: AbortSignal): Promise<SimulatorScenario[]
   return request<SimulatorScenario[]>("/simulator/scenarios", signal);
 }
 
+export function loadRun(runId: string, signal?: AbortSignal): Promise<SimulatorRun> {
+  return request<SimulatorRun>(`/simulator/runs/${encodeURIComponent(runId)}`, signal);
+}
+
 export function loadRunEvents(runId: string, signal?: AbortSignal): Promise<Page<SimulatorEvent>> {
   return request<Page<SimulatorEvent>>(`/simulator/runs/${encodeURIComponent(runId)}/events?page=1&page_size=200`, signal);
 }
