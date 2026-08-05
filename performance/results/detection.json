@@ -1,0 +1,561 @@
+{
+  "requested_runs": 100,
+  "scenarios": [
+    "known_span",
+    "inferred_span",
+    "weak_inferred",
+    "missing_endpoints",
+    "dt_fault",
+    "feeder_fault",
+    "three_branch_faults",
+    "tier_one",
+    "same_path_faults",
+    "real_fault_during_schedule"
+  ],
+  "target_p95_seconds": 120.0,
+  "timing_basis": "wall clock over the public API; simulator processes its inbox deterministically",
+  "detection_seconds": {
+    "samples": 90,
+    "min": 0.22723531600058777,
+    "p50": 0.8317085730013787,
+    "p95": 4.853700904997822,
+    "p99": 9.232937492000929,
+    "max": 9.232937492000929,
+    "mean": 1.5330318949333257
+  },
+  "restoration_seconds": {
+    "samples": 53,
+    "min": 0.09129510200000368,
+    "p50": 0.49332239799696254,
+    "p95": 1.9013361990000703,
+    "p99": 2.3747799199991277,
+    "max": 2.3747799199991277,
+    "mean": 0.6998024756416408
+  },
+  "detection_within_target": true,
+  "restoration_within_target": true,
+  "detection_by_scenario": {
+    "dt_fault": {
+      "samples": 9,
+      "min": 0.6329535140030202,
+      "p50": 1.305566552997334,
+      "p95": 2.0350142329989467,
+      "p99": 2.0350142329989467,
+      "max": 2.0350142329989467,
+      "mean": 1.3156204193324408
+    },
+    "feeder_fault": {
+      "samples": 10,
+      "min": 2.344856586001697,
+      "p50": 4.331905234997976,
+      "p95": 9.232937492000929,
+      "p99": 9.232937492000929,
+      "max": 9.232937492000929,
+      "mean": 4.8055523386014105
+    },
+    "inferred_span": {
+      "samples": 3,
+      "min": 0.22723531600058777,
+      "p50": 0.31613100200047484,
+      "p95": 0.3542658190053771,
+      "p99": 0.3542658190053771,
+      "max": 0.3542658190053771,
+      "mean": 0.2992107123354799
+    },
+    "known_span": {
+      "samples": 10,
+      "min": 0.4020733340003062,
+      "p50": 0.6985856940009398,
+      "p95": 1.5587456159992144,
+      "p99": 1.5587456159992144,
+      "max": 1.5587456159992144,
+      "mean": 0.7714448323000397
+    },
+    "missing_endpoints": {
+      "samples": 9,
+      "min": 0.3621659679993172,
+      "p50": 1.0138826789989253,
+      "p95": 1.1568347140055266,
+      "p99": 1.1568347140055266,
+      "max": 1.1568347140055266,
+      "mean": 0.9146803054439564
+    },
+    "real_fault_during_schedule": {
+      "samples": 10,
+      "min": 0.28829277700424427,
+      "p50": 0.6795472290032194,
+      "p95": 0.9471227230023942,
+      "p99": 0.9471227230023942,
+      "max": 0.9471227230023942,
+      "mean": 0.6430011030999594
+    },
+    "same_path_faults": {
+      "samples": 10,
+      "min": 0.30325771900243126,
+      "p50": 0.6727064580045408,
+      "p95": 1.3661680799996248,
+      "p99": 1.3661680799996248,
+      "max": 1.3661680799996248,
+      "mean": 0.7024896346003515
+    },
+    "three_branch_faults": {
+      "samples": 10,
+      "min": 1.851977916994656,
+      "p50": 3.5443131270003505,
+      "p95": 5.849659863000852,
+      "p99": 5.849659863000852,
+      "max": 5.849659863000852,
+      "mean": 3.5024042311983066
+    },
+    "tier_one": {
+      "samples": 10,
+      "min": 0.37690806700265966,
+      "p50": 0.6830303410024499,
+      "p95": 1.1881961909966776,
+      "p99": 1.1881961909966776,
+      "max": 1.1881961909966776,
+      "mean": 0.6779149150002922
+    },
+    "weak_inferred": {
+      "samples": 9,
+      "min": 0.48753325900179334,
+      "p50": 0.6436535230022855,
+      "p95": 0.913373794996005,
+      "p99": 0.913373794996005,
+      "max": 0.913373794996005,
+      "mean": 0.6638290373335217
+    }
+  },
+  "failure_count": 47,
+  "failures": [
+    {
+      "run": 1,
+      "scenario": "inferred_span",
+      "seed": 20260804,
+      "reason": "no incident generated"
+    },
+    {
+      "run": 2,
+      "scenario": "weak_inferred",
+      "seed": 20260805,
+      "reason": "no incident generated"
+    },
+    {
+      "run": 5,
+      "scenario": "feeder_fault",
+      "seed": 20260808,
+      "reason": "POST /simulator/runs/d15125f6-f1c1-4125-b55d-5b13921bdd40/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 6,
+      "scenario": "three_branch_faults",
+      "seed": 20260809,
+      "reason": "GET /incidents/9ee2ce00-842a-43fd-8337-f3aef97b2652 -> 404: b'{\"detail\":{\"code\":\"incident_not_found\"}}'"
+    },
+    {
+      "run": 9,
+      "scenario": "real_fault_during_schedule",
+      "seed": 20260812,
+      "reason": "POST /simulator/runs/8f504915-c363-4577-805b-2a7ab119ce84/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 11,
+      "scenario": "inferred_span",
+      "seed": 20260814,
+      "reason": "no incident generated"
+    },
+    {
+      "run": 13,
+      "scenario": "missing_endpoints",
+      "seed": 20260816,
+      "reason": "POST /simulator/runs/747ae272-d673-4713-b6e4-d186408eec1b/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 14,
+      "scenario": "dt_fault",
+      "seed": 20260817,
+      "reason": "POST /simulator/runs/ffe7634c-93ab-4432-8057-f8d302a1f450/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 15,
+      "scenario": "feeder_fault",
+      "seed": 20260818,
+      "reason": "POST /simulator/runs/55711617-56a1-44c7-819c-75b5618b3ef9/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 16,
+      "scenario": "three_branch_faults",
+      "seed": 20260819,
+      "reason": "GET /incidents/88652186-d17b-4b8e-b20d-92264df6664b -> 404: b'{\"detail\":{\"code\":\"incident_not_found\"}}'"
+    },
+    {
+      "run": 21,
+      "scenario": "inferred_span",
+      "seed": 20260824,
+      "reason": "no incident generated"
+    },
+    {
+      "run": 22,
+      "scenario": "weak_inferred",
+      "seed": 20260825,
+      "reason": "POST /simulator/runs/e17d1dc2-3ce9-4d70-aaef-0fa5bcd61f49/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 23,
+      "scenario": "missing_endpoints",
+      "seed": 20260826,
+      "reason": "POST /simulator/runs/997035c4-30dd-4d1b-beef-8c8eb4d20336/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 24,
+      "scenario": "dt_fault",
+      "seed": 20260827,
+      "reason": "no incident generated"
+    },
+    {
+      "run": 25,
+      "scenario": "feeder_fault",
+      "seed": 20260828,
+      "reason": "POST /simulator/runs/d3cc1703-9ae7-49b6-be69-934c7daabdb4/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 26,
+      "scenario": "three_branch_faults",
+      "seed": 20260829,
+      "reason": "POST /simulator/runs/dcc6d575-1686-480a-b7b4-e1b7dccc5086/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 33,
+      "scenario": "missing_endpoints",
+      "seed": 20260836,
+      "reason": "no incident generated"
+    },
+    {
+      "run": 34,
+      "scenario": "dt_fault",
+      "seed": 20260837,
+      "reason": "POST /simulator/runs/2644cd09-2641-463d-88c4-55564b6fe114/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 35,
+      "scenario": "feeder_fault",
+      "seed": 20260838,
+      "reason": "POST /simulator/runs/57940e04-4298-4c54-a532-5ad69f2b2c5f/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 36,
+      "scenario": "three_branch_faults",
+      "seed": 20260839,
+      "reason": "GET /incidents/647fe72f-c0f4-4a5e-8b4f-01e67df8f9ca -> 404: b'{\"detail\":{\"code\":\"incident_not_found\"}}'"
+    },
+    {
+      "run": 37,
+      "scenario": "tier_one",
+      "seed": 20260840,
+      "reason": "POST /simulator/runs/ae53052a-71e1-48f5-bfe9-a8feca83731a/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 38,
+      "scenario": "same_path_faults",
+      "seed": 20260841,
+      "reason": "POST /simulator/runs/882a123b-5b4f-4bff-a1a6-141c0ebf1a37/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 41,
+      "scenario": "inferred_span",
+      "seed": 20260844,
+      "reason": "no incident generated"
+    },
+    {
+      "run": 43,
+      "scenario": "missing_endpoints",
+      "seed": 20260846,
+      "reason": "POST /simulator/runs/862bdc5f-9235-43ac-996d-d5f19535fc72/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 44,
+      "scenario": "dt_fault",
+      "seed": 20260847,
+      "reason": "POST /simulator/runs/b1903489-2cc2-430f-ae50-71b8e0ffd321/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 45,
+      "scenario": "feeder_fault",
+      "seed": 20260848,
+      "reason": "POST /simulator/runs/961ca00a-4ae0-4883-bd38-22c8491804c6/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 46,
+      "scenario": "three_branch_faults",
+      "seed": 20260849,
+      "reason": "GET /incidents/586fa741-b685-478e-bfaa-e946c30e6693 -> 404: b'{\"detail\":{\"code\":\"incident_not_found\"}}'"
+    },
+    {
+      "run": 47,
+      "scenario": "tier_one",
+      "seed": 20260850,
+      "reason": "POST /simulator/runs/1a0e0144-b0a7-48a9-a226-b8fb2d4706c5/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 51,
+      "scenario": "inferred_span",
+      "seed": 20260854,
+      "reason": "no incident generated"
+    },
+    {
+      "run": 54,
+      "scenario": "dt_fault",
+      "seed": 20260857,
+      "reason": "POST /simulator/runs/f590fbc2-348c-4e53-b190-1dc1ecbe0d4a/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 55,
+      "scenario": "feeder_fault",
+      "seed": 20260858,
+      "reason": "POST /simulator/runs/d7c74ea3-5ff5-4327-82d9-5402f474d28c/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 56,
+      "scenario": "three_branch_faults",
+      "seed": 20260859,
+      "reason": "GET /incidents/c1289261-2302-4c0e-9c76-27a2b139b760 -> 404: b'{\"detail\":{\"code\":\"incident_not_found\"}}'"
+    },
+    {
+      "run": 58,
+      "scenario": "same_path_faults",
+      "seed": 20260861,
+      "reason": "POST /simulator/runs/0c44c947-99d6-4c5c-9c19-cdf3db9d20e4/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 60,
+      "scenario": "known_span",
+      "seed": 20260863,
+      "reason": "POST /simulator/runs/1f005afb-f09f-467b-92fe-187bf653870c/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 61,
+      "scenario": "inferred_span",
+      "seed": 20260864,
+      "reason": "no incident generated"
+    },
+    {
+      "run": 63,
+      "scenario": "missing_endpoints",
+      "seed": 20260866,
+      "reason": "POST /simulator/runs/bb5076c4-4e19-42dd-ac0d-d020782d1410/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 64,
+      "scenario": "dt_fault",
+      "seed": 20260867,
+      "reason": "POST /simulator/runs/af0fd571-47b2-4077-84ab-08449a2ee3b5/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 65,
+      "scenario": "feeder_fault",
+      "seed": 20260868,
+      "reason": "POST /simulator/runs/43073a8c-aa6b-4129-87d1-40c291808c47/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 66,
+      "scenario": "three_branch_faults",
+      "seed": 20260869,
+      "reason": "GET /incidents/d10bb513-81ce-4afb-876e-89e3f97b2ea3 -> 404: b'{\"detail\":{\"code\":\"incident_not_found\"}}'"
+    },
+    {
+      "run": 67,
+      "scenario": "tier_one",
+      "seed": 20260870,
+      "reason": "POST /simulator/runs/d4b36e13-5ebe-4a46-bbb2-a29baa5dc1e9/repair -> 500: b'Internal Server Error'"
+    },
+    {
+      "run": 75,
+      "scenario": "feeder_fault",
+      "seed": 20260878,
+      "reason": "ended in resolved"
+    },
+    {
+      "run": 76,
+      "scenario": "three_branch_faults",
+      "seed": 20260879,
+      "reason": "ended in crew_assigned"
+    },
+    {
+      "run": 81,
+      "scenario": "inferred_span",
+      "seed": 20260884,
+      "reason": "no incident generated"
+    },
+    {
+      "run": 85,
+      "scenario": "feeder_fault",
+      "seed": 20260888,
+      "reason": "ended in resolved"
+    },
+    {
+      "run": 86,
+      "scenario": "three_branch_faults",
+      "seed": 20260889,
+      "reason": "ended in crew_assigned"
+    },
+    {
+      "run": 95,
+      "scenario": "feeder_fault",
+      "seed": 20260898,
+      "reason": "ended in resolved"
+    },
+    {
+      "run": 96,
+      "scenario": "three_branch_faults",
+      "seed": 20260899,
+      "reason": "ended in crew_assigned"
+    }
+  ],
+  "detection_samples_seconds": [
+    0.43008468599873595,
+    1.1031421689986018,
+    0.734582885997952,
+    2.925602636001713,
+    3.3827878019947093,
+    0.6302042410025024,
+    0.7118260040006135,
+    0.6795472290032194,
+    0.4438782639990677,
+    0.5805203519994393,
+    1.1568347140055266,
+    1.2995613829989452,
+    3.909032119998301,
+    3.5443131270003505,
+    0.39781743200001074,
+    0.45520432099874597,
+    0.4552194969946868,
+    0.6985856940009398,
+    0.913373794996005,
+    1.0138826789989253,
+    4.108684366001398,
+    4.6845163960024365,
+    0.5487785240038647,
+    0.5831456150044687,
+    0.5643132449986297,
+    1.2571402940011467,
+    0.31613100200047484,
+    0.48753325900179334,
+    1.7839486919983756,
+    6.133045384005527,
+    5.849659863000852,
+    0.9825912289961707,
+    1.3661680799996248,
+    0.9056821359990863,
+    0.4020733340003062,
+    0.6937949400016805,
+    1.0802636269945651,
+    1.4748479209956713,
+    4.331905234997976,
+    2.4794884189977893,
+    0.7699268469950766,
+    0.871718021997367,
+    0.8317085730013787,
+    0.9430894869947224,
+    0.5866929199983133,
+    0.7231366539999726,
+    2.0350142329989467,
+    7.731247891999374,
+    4.166109186997346,
+    0.7687154459999874,
+    0.9628867609935696,
+    0.9471227230023942,
+    1.5587456159992144,
+    0.7278697619985905,
+    1.1194079810011317,
+    1.6544080009989557,
+    9.232937492000929,
+    4.853700904997822,
+    1.1881961909966776,
+    0.30325771900243126,
+    0.28829277700424427,
+    0.7439760600027512,
+    0.3542658190053771,
+    0.6436535230022855,
+    0.9934074949997012,
+    0.9197005910027656,
+    2.344856586001697,
+    2.067909999997937,
+    0.43298083200352266,
+    0.5986488019989338,
+    0.7793360729992855,
+    0.5964720210031373,
+    0.7810917500028154,
+    0.6798814619978657,
+    1.305566552997334,
+    4.5029070650052745,
+    1.851977916994656,
+    0.37690806700265966,
+    0.4993345640032203,
+    0.42128717900050106,
+    0.6404028670003754,
+    0.22723531600058777,
+    0.5599310350007727,
+    0.3621659679993172,
+    0.6329535140030202,
+    2.835304610001913,
+    2.1435786959991674,
+    0.6830303410024499,
+    0.6727064580045408,
+    0.5575015989961685
+  ],
+  "restoration_samples_seconds": [
+    0.25661537000269163,
+    1.3216605080015142,
+    1.6275369630020577,
+    0.30796261400246294,
+    1.4093765360012185,
+    0.19934535199718084,
+    0.2350282879997394,
+    0.1681896459995187,
+    0.6553128660016228,
+    0.4586209240005701,
+    0.9921630829994683,
+    0.3151910050000879,
+    0.5099432949937182,
+    0.5109064110001782,
+    1.9091121910023503,
+    0.13886313799594063,
+    0.5507698180008447,
+    1.0306015239984845,
+    0.354043693994754,
+    0.6524231560033513,
+    1.33214372999646,
+    1.2929850240034284,
+    0.607549812993966,
+    0.41728326700103935,
+    1.9013361990000703,
+    0.3334039440014749,
+    1.5532191160018556,
+    0.43396257999847876,
+    0.17213032900326652,
+    0.12597437099611852,
+    0.6786866670008749,
+    0.20241500600241125,
+    0.5704310070068459,
+    1.3017580579980859,
+    1.5039731819997542,
+    0.3138928400003351,
+    0.389754764000827,
+    0.8317135809993488,
+    0.48407881700404687,
+    1.0243479479977395,
+    0.8585467819939367,
+    2.3747799199991277,
+    0.18192062500020256,
+    0.28702259399869945,
+    0.3500654400049825,
+    0.4092622169991955,
+    0.09129510200000368,
+    0.7784775809996063,
+    0.17237415800627787,
+    1.2300322560040513,
+    0.41314304399566026,
+    0.49332239799696254,
+    0.3745824670040747
+  ]
+}

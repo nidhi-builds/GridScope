@@ -1,147 +1,54 @@
 {
-  "elapsed_seconds": 205.35350233400095,
+  "elapsed_seconds": 218.07166247399437,
   "accuracy": {
     "exact_span": {
-      "attempts": 25,
-      "hits": 9,
-      "precision": 0.36,
-      "gate": 0.95
+      "attempts": 10,
+      "hits": 10,
+      "precision": 1.0,
+      "gate": 0.95,
+      "unscorable_runs": 17,
+      "unscorable_note": "scenarios whose effect evidence publishes no target edge, so correctness cannot be judged"
     },
     "corridor_containment": {
-      "attempts": 43,
-      "hits": 43,
+      "attempts": 45,
+      "hits": 45,
       "containment": 1.0,
       "gate": 0.95
     },
     "inferred_exact_output_count": 0,
     "inferred_exact_output_disabled": true,
-    "degraded_topology_runs": 40,
+    "degraded_topology_runs": 42,
     "corridor_candidate_spans_total": 0,
     "scope_localization": {
-      "attempts": 9,
-      "correct": 9,
+      "attempts": 7,
+      "correct": 7,
       "precision": 1.0
     },
     "misses": [
-      {
-        "scenario": "tier_one",
-        "seed": 20260804,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "09082563-8d04-520a-ba3a-f0cee9fdf15b",
-          "cadc2417-5f6b-5a74-93d4-fb1491aafb93"
-        ],
-        "truth": null
-      },
-      {
-        "scenario": "real_fault_during_schedule",
-        "seed": 20260805,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "118214b7-77f2-5325-b867-44f3f379a3d1",
-          "6645a5ca-9eda-5598-9ca9-032b0b696aea"
-        ],
-        "truth": null
-      },
       {
         "scenario": "inferred_span",
         "seed": 20260808,
         "reason": "no incident generated"
       },
       {
-        "scenario": "weak_inferred",
-        "seed": 20260809,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "missing_endpoints",
-        "seed": 20260810,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "tier_one",
-        "seed": 20260815,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "19ad2823-df19-50af-9a84-700669f75966",
-          "cc2c19cd-f1a1-51c2-96fc-3a3f3243f845"
-        ],
-        "truth": null
-      },
-      {
-        "scenario": "real_fault_during_schedule",
-        "seed": 20260816,
+        "scenario": "feeder_fault",
+        "seed": 20260813,
         "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
       },
       {
         "scenario": "inferred_span",
         "seed": 20260817,
+        "reason": "no incident generated"
+      },
+      {
+        "scenario": "missing_endpoints",
+        "seed": 20260832,
         "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "tier_one",
-        "seed": 20260826,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "174c121b-e704-5c67-87b1-04cffde7955d",
-          "d238b261-5867-541d-8bf5-7efd92426b48"
-        ],
-        "truth": null
-      },
-      {
-        "scenario": "real_fault_during_schedule",
-        "seed": 20260827,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "9892c6ba-2e12-5eba-9bce-a131e72f24c5",
-          "e4e747bf-f5af-5160-9980-d5cc44bc0a1d"
-        ],
-        "truth": null
-      },
-      {
-        "scenario": "same_path_faults",
-        "seed": 20260833,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "tier_one",
-        "seed": 20260837,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "11ae2e98-c8ef-57b5-ae0a-98b771209116",
-          "e547365e-3ab3-5c30-b8d7-a872bf3435cd"
-        ],
-        "truth": null
       },
       {
         "scenario": "real_fault_during_schedule",
         "seed": 20260838,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "72d0dcdb-a2b9-50b8-9d67-158beed27cd9",
-          "cf73f7e5-19e9-5f01-8073-9e7ec94318f9"
-        ],
-        "truth": null
-      },
-      {
-        "scenario": "tier_one",
-        "seed": 20260848,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "712b3796-29d0-517a-8a00-0efbe301bc85",
-          "a9a66a83-c709-5907-a0fd-bda03bbadfec"
-        ],
-        "truth": null
-      },
-      {
-        "scenario": "real_fault_during_schedule",
-        "seed": 20260849,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "89aa3a5d-b653-57d3-809a-df2653ef4056",
-          "c3874502-d0a6-5532-abe4-b308d407d930"
-        ],
-        "truth": null
+        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
       },
       {
         "scenario": "weak_inferred",
@@ -152,26 +59,6 @@
         "scenario": "missing_endpoints",
         "seed": 20260854,
         "reason": "no incident generated"
-      },
-      {
-        "scenario": "tier_one",
-        "seed": 20260859,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "a383473e-cc97-567f-9a0e-027cd181c790",
-          "d0713969-4ef4-527f-8fc4-b5f7b2dcda72"
-        ],
-        "truth": null
-      },
-      {
-        "scenario": "real_fault_during_schedule",
-        "seed": 20260860,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "3beb69ea-eb76-5f1f-8c50-12940996427d",
-          "46e89624-1397-5db5-915d-a1eddd03fc13"
-        ],
-        "truth": null
       },
       {
         "scenario": "inferred_span",
@@ -189,26 +76,6 @@
         "reason": "no incident generated"
       },
       {
-        "scenario": "tier_one",
-        "seed": 20260870,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "2c7270bf-c6c4-5d65-ac86-c75f1912222e",
-          "fc1c9b57-c66d-5d80-9912-e6fa8858f8bb"
-        ],
-        "truth": null
-      },
-      {
-        "scenario": "real_fault_during_schedule",
-        "seed": 20260871,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "73d3f491-0398-52a8-b721-2cfcbd4f140f",
-          "9f70b49a-ae5b-581f-a471-0412ea121eae"
-        ],
-        "truth": null
-      },
-      {
         "scenario": "weak_inferred",
         "seed": 20260873,
         "reason": "no incident generated"
@@ -216,62 +83,27 @@
       {
         "scenario": "dt_fault",
         "seed": 20260878,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "known_span",
-        "seed": 20260880,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "tier_one",
-        "seed": 20260881,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "real_fault_during_schedule",
-        "seed": 20260882,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "4c30d160-5f82-5c3d-b6e5-54327a69c5e9",
-          "e547365e-3ab3-5c30-b8d7-a872bf3435cd"
-        ],
-        "truth": null
-      },
-      {
-        "scenario": "inferred_span",
-        "seed": 20260883,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
+        "reason": "no incident generated"
       },
       {
         "scenario": "missing_endpoints",
         "seed": 20260887,
+        "reason": "no incident generated"
+      },
+      {
+        "scenario": "inferred_span",
+        "seed": 20260896,
         "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
       },
       {
-        "scenario": "same_path_faults",
-        "seed": 20260888,
+        "scenario": "missing_endpoints",
+        "seed": 20260898,
         "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
       },
       {
-        "scenario": "tier_one",
-        "seed": 20260892,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "4669da3a-bb85-5258-8c24-02db9acdeb84",
-          "b193aa34-8c0e-54f9-a230-4467ec4d0db8"
-        ],
-        "truth": null
-      },
-      {
-        "scenario": "real_fault_during_schedule",
-        "seed": 20260893,
-        "reason": "span endpoints differ from truth",
-        "reported": [
-          "87a32ff2-d313-5901-8fc1-0279f1eb6be5",
-          "89cfe41a-ea19-5d8d-ad71-712de04f591d"
-        ],
-        "truth": null
+        "scenario": "feeder_fault",
+        "seed": 20260901,
+        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
       }
     ]
   },
@@ -285,125 +117,105 @@
       "planned_outage",
       "firmware_12_silence"
     ],
-    "false_ticket_count": 19,
+    "false_ticket_count": 15,
     "false_tickets": [
       {
         "scenario": "planned_outage",
         "seed": 20265807,
         "incident_ids": [
-          "a02043de-38e8-48a3-a4d8-02de94ae39d5",
-          "e79d6de3-edc9-49ea-8043-f2740223d609"
+          "94bbb6e0-91a8-4730-860e-49610cfdf3b5",
+          "1ff9ab27-ce47-404e-a69d-ece2cb57e2fd"
         ]
-      },
-      {
-        "scenario": "firmware_12_silence",
-        "seed": 20265808,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "device_death",
-        "seed": 20265809,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
       },
       {
         "scenario": "planned_outage",
         "seed": 20265813,
         "incident_ids": [
-          "82dd8b6e-c1fd-47ea-b4e2-d7e7a1544aea"
+          "c083b25c-f746-4c1d-a1b9-8e9f1aa05112"
         ]
       },
       {
         "scenario": "planned_outage",
         "seed": 20265819,
         "incident_ids": [
-          "89873971-b66f-4da4-9e1d-b714aa79984f"
+          "f9a775eb-7a6b-42fb-b401-6ca4a387678f"
         ]
       },
       {
         "scenario": "planned_outage",
         "seed": 20265825,
         "incident_ids": [
-          "16a7ca39-6483-402e-b187-b3017d18007e"
+          "924b04e6-1799-4644-920e-3d48cae469f6"
         ]
       },
       {
         "scenario": "planned_outage",
         "seed": 20265831,
         "incident_ids": [
-          "ce464721-b27e-4072-877c-ac4f3f5a7a40"
+          "8ec81eda-20a2-4c5f-a3a5-584a16cdc377"
         ]
       },
       {
         "scenario": "planned_outage",
         "seed": 20265837,
         "incident_ids": [
-          "ef1b28d8-51cc-4961-82cf-238d15f0af66",
-          "4e6f15f4-fdd9-4ed8-9d99-b560c605796c"
+          "f8f72803-47a7-4465-887a-70be440d4b1e",
+          "40367606-a223-454d-83a7-460f00548f25"
         ]
+      },
+      {
+        "scenario": "firmware_12_silence",
+        "seed": 20265838,
+        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
+      },
+      {
+        "scenario": "device_death",
+        "seed": 20265839,
+        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
+      },
+      {
+        "scenario": "noise_baseline",
+        "seed": 20265840,
+        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
       },
       {
         "scenario": "planned_outage",
         "seed": 20265843,
         "incident_ids": [
-          "c553ed5e-aa83-4467-bac6-12f59daa463c"
+          "8694c507-2bfe-441e-9d26-b1ba10e47d88"
         ]
       },
       {
         "scenario": "planned_outage",
         "seed": 20265849,
-        "incident_ids": [
-          "14a742aa-fe96-4f8e-b951-519a2275e9d5"
-        ]
+        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
       },
       {
         "scenario": "planned_outage",
         "seed": 20265861,
         "incident_ids": [
-          "895bf9f4-894a-40b8-8f5d-065c7a69e382"
+          "c12d6ca5-3314-4c2b-898e-f2e03be71c6a"
         ]
       },
       {
         "scenario": "planned_outage",
         "seed": 20265867,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "firmware_12_silence",
-        "seed": 20265868,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "device_death",
-        "seed": 20265869,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
+        "incident_ids": [
+          "58d2b97a-584b-46ba-848e-adb51ee813d0"
+        ]
       },
       {
         "scenario": "planned_outage",
         "seed": 20265873,
         "incident_ids": [
-          "7ee69c4d-1ec2-444d-a013-5b6ab61c6fdc"
+          "7228f9bc-4c6b-4fd5-a1ef-5751a5fdb13f"
         ]
-      },
-      {
-        "scenario": "noise_baseline",
-        "seed": 20265876,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "reboot_replay",
-        "seed": 20265877,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
-      },
-      {
-        "scenario": "transport_noise",
-        "seed": 20265878,
-        "reason": "POST /simulator/reset -> 500: b'Internal Server Error'"
       },
       {
         "scenario": "planned_outage",
         "seed": 20265897,
         "incident_ids": [
-          "f287823b-3e72-4a08-879a-61959ac0233d"
+          "c2937fc2-f8e8-4539-a008-e4fc12ca9adc"
         ]
       }
     ],
@@ -415,7 +227,7 @@
       "planned_outage": 13,
       "firmware_12_silence": 0
     },
-    "unobservable_run_count": 14,
+    "unobservable_run_count": 15,
     "gate": "zero false tickets"
   }
 }
