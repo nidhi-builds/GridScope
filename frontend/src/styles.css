@@ -10,3 +10,47 @@ button, select { font: inherit; }
 @media (max-width: 760px) { .app-shell { grid-template-columns: 2.75rem 1fr; }.operations-layout { grid-template-columns: 1fr; }.queue-panel { border-right: 0; border-bottom: 1px solid #dbe3ef; }.network-map { min-height: 20rem; }.leaflet-map { min-height: 20rem; }.status-bar { gap: .45rem; font-size: .8rem; } }
 .map-line::before { content: ""; display: inline-block; width: 1.25rem; margin-right: .35rem; border-top: 2px solid #172033; vertical-align: middle; }.map-line.inferred::before { border-top-style: dashed; }.map-line.selected-boundary::before { border-color: #c32929; border-top-width: 4px; }
 .incident-detail { border-top: 1px solid #dbe3ef; padding: 1rem; font-size: .88rem; }.incident-detail h2, .incident-detail h3 { margin: .4rem 0; }.incident-detail p { margin: .35rem 0; }.incident-detail button { border: 0; border-radius: .25rem; background: #164fa4; color: white; padding: .45rem .7rem; cursor: pointer; }
+
+/* Navigation rail: icons carry text labels, so the rail needs real width. */
+.app-shell { grid-template-columns: 12.5rem 1fr; }
+.icon-rail { display: flex; flex-direction: column; gap: .15rem; padding: .8rem .55rem; text-align: left; }
+.icon-rail a { display: flex; align-items: center; gap: .6rem; padding: .5rem .55rem; border-radius: .35rem; font-size: .82rem; line-height: 1.25; }
+.icon-rail a > span[aria-hidden="true"] { flex: none; width: 1.25rem; font-size: 1.05rem; text-align: center; }
+.icon-rail a:hover { background: #1d3358; }
+.icon-rail a[aria-current="page"] { background: #21406b; font-weight: 600; }
+
+/* Shared surfaces for the simulator and secondary operational views. */
+.secondary-header, .demo-banner { padding: 1rem 1.25rem; background: white; border-bottom: 1px solid #dbe3ef; }
+.secondary-header h1, .demo-banner h1 { margin: 0 0 .25rem; font-size: 1.15rem; }
+.secondary-header p, .demo-banner p { margin: 0; color: #5b687b; font-size: .85rem; }
+.demo-banner { background: #fff4e5; border-bottom-color: #f0c48a; }
+
+.scenario-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .85rem 1.25rem; background: white; border-bottom: 1px solid #dbe3ef; }
+.scenario-controls label { font-size: .72rem; text-transform: uppercase; color: #5b687b; }
+.scenario-controls select, .scenario-controls input { padding: .35rem .45rem; border: 1px solid #cbd5e4; border-radius: .3rem; }
+.scenario-controls input { width: 7.5rem; }
+.scenario-controls button { border: 0; border-radius: .25rem; background: #164fa4; color: white; padding: .45rem .8rem; cursor: pointer; }
+.scenario-controls button:disabled { background: #9fb0c8; cursor: not-allowed; }
+
+.run-comparison, .event-stream, .device-health-panel { margin: 1rem 1.25rem; padding: 1rem 1.25rem; background: white; border: 1px solid #dbe3ef; border-radius: .4rem; }
+.run-comparison h2 { margin: 0 0 .35rem; font-size: 1rem; }
+.run-comparison h3, .event-stream h3 { margin: .9rem 0 .4rem; font-size: .72rem; text-transform: uppercase; color: #5b687b; }
+.run-comparison p, .event-stream p { margin: .3rem 0; font-size: .88rem; }
+.run-comparison ul { margin: .2rem 0 0; padding-left: 1.1rem; font-size: .88rem; }
+.event-stream table { font-size: .82rem; }
+
+.planned-list { margin: 1rem 1.25rem; padding: 0; list-style: none; display: grid; gap: .75rem; }
+.planned-list li { padding: 1rem 1.25rem; background: white; border: 1px solid #dbe3ef; border-radius: .4rem; }
+.planned-list h2 { margin: 0 0 .35rem; font-size: .95rem; text-transform: capitalize; }
+.planned-list p { margin: .25rem 0; font-size: .85rem; }
+
+.system-health { margin: 1rem 1.25rem; padding: 0; list-style: none; display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.system-health li { padding: .75rem 1rem; background: white; border: 1px solid #dbe3ef; border-radius: .4rem; font-size: .88rem; }
+
+/* Narrow reviewer viewport: collapse the rail to icons only. */
+@media (max-width: 760px) {
+  .app-shell { grid-template-columns: 3.4rem 1fr; }
+  .icon-rail a { justify-content: center; padding: .5rem .25rem; }
+  .rail-label { display: none; }
+  .run-comparison, .event-stream, .device-health-panel, .planned-list, .system-health { margin: .75rem; }
+}
