@@ -844,6 +844,67 @@ decisions, design changes, implementation milestones, or verification results.
 - [follow-up] Run the suite in `performance/README.md` on the Windows host,
   commit the raw JSON, and report any missed target with its actual value and
   bottleneck. Regenerate `openapi.json` via `scripts/export_openapi.py`.
+- [verification] Playwright suite green on the real stack: 12/12. Browser-observed
+  lifecycle `detection 0.95s`, `restoration 35.2s` against a 120s target; incident
+  list `p95 0.09s` against a 2s target; zero false tickets across five noise
+  scenarios; zero horizontal overflow at a 390px viewport.
+- [failure] The first Playwright run found `POST /simulator/reset` returning 500
+  after any completed lifecycle. `reset_runs` clears six tables that reference
+  incidents but not `ai_explanations`, which was added in Task 10 after the reset
+  path was written in Task 9, so an explained incident could never be deleted.
+  Fixed in `a940c12` with a regression test. Reproduces with no Gemini key, since
+  the `missing_api_key` fallback still persists the row.
+- [failure] The API-unavailable state was unreachable code. `useVisiblePolling`
+  set `loading: !current.data` on failure, so a cold start with a dead API had no
+  data, stayed in `loading` forever, and showed "Loading operations" instead of
+  "API unavailable". Fixed in `c5e1aec`; a failed attempt is a finished attempt.
+- [decision] Backend tests are not isolated from database state. Running the load
+  tests then pytest reproduces 15 failures that vanish after `docker compose down
+  -v`. Documented the required ordering in `performance/README.md` rather than
+  restructuring the suite this late. Worth declaring as a known limitation.
+
+### 2026-08-05 (Task 14 ingest bottleneck)
+
+- [output] Sustained ingest measured at **57 req/s** against a 500 req/s target,
+  with zero HTTP failures, zero rejections, and zero data loss. The miss is
+  throughput only; nothing broke under load.
+- [failure] Three hypotheses were wrong before the evidence was gathered, and
+  each is recorded because the disproof is what narrowed the search.
+  1. *Concurrency limits.* Raised the SQLAlchemy pool from 15 to 60 and the anyio
+     threadpool from 40 to 80. Throughput went 57.4 to 53.5 req/s — worse, within
+     noise. Concurrency was never the constraint.
+  2. *fsync-bound commits.* `pgbench -c 10 -T 20` returned **899 tps** with 11ms
+     average latency. The database is 17x faster than the application; storage
+     was never the constraint.
+  3. *Pool sizing.* The 60-connection pool exceeded PostgreSQL's `max_connections`
+     of 100 once a test runner opened its own engine, breaking 22 tests. Shrunk to
+     30 per process in `c4fd269`, with the invariant asserted as
+     `(pool + overflow) * 2 < 100` rather than a hand-picked number.
+- [decision] `run_worker` was declared `async` but called blocking database work
+  directly on the event loop, freezing every in-flight request for the length of
+  each batch, every 3 seconds. `poll_schedule_feed` had the same defect on a 60s
+  cycle. Both moved to `asyncio.to_thread` in `0812d63`. This was a production
+  defect, not a test artefact: the API stalled every poll interval. Throughput
+  53.5 to 60.9 req/s.
+- [decision] The worker slept the full poll interval even with a full batch
+  waiting, capping drain at one batch per 3s. After a 60s load run, 11,161 events
+  were still unprocessed 60s later and the drain gate failed. `0a6542a` continues
+  immediately while batches come back full. Drain now reaches
+  `unprocessed_count: 0`, and throughput rose again to **70.4 req/s**.
+- [verification] `docker stats` captured *during* load, not after: `web` at
+  170-193% CPU, `db` at 77%. The application process is the saturated component.
+  At roughly 16ms of CPU per request — Pydantic validation, four SQLAlchemy ORM
+  queries, a commit, JSON serialization — one CPython process ceilings near 60-70
+  req/s. Earlier 0.25% readings were post-run snapshots and misled the analysis.
+- [decision] Reported honestly at 70.4 req/s rather than weakening the assertion,
+  per the plan's instruction. Two paths to the target are documented and not
+  taken: collapse the four ORM queries into raw SQL (bounded, maybe 2-3x), or
+  move the inbox worker and scheduler into their own container so the API can run
+  multiple Uvicorn processes (closest to correct, changes the deployment shape
+  that Task 15 builds on).
+- [finalized] Sustained gate: throughput **missed** at 70.4 of 500 req/s; failure
+  rate **passed** at 0%; drain **passed** at 0 remaining. Raw result preserved in
+  `performance/results/sustained.json`.
 
 ## Future Entry Format
 

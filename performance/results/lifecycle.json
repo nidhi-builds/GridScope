@@ -1,0 +1,14 @@
+{
+  "recorded_at": "2026-08-05T14:30:16.042Z",
+  "scenario": "known_span",
+  "run_id": "e364fd97-e217-4de3-a4a0-3ae7345f1481",
+  "incident_id": "c7f3e4c1-baab-4838-a904-43d10d34fd1a",
+  "detection_seconds": 0.949,
+  "restoration_seconds": 35.164,
+  "target_seconds": 120,
+  "detection_within_target": true,
+  "restoration_within_target": true,
+  "final_status": "closed",
+  "affected_count": 7,
+  "confidence": "high"
+}

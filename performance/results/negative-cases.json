@@ -1,0 +1,12 @@
+{
+  "recorded_at": "2026-08-05T14:30:30.273Z",
+  "zero_ticket_scenarios": {
+    "device_death": 0,
+    "planned_outage": 0,
+    "reboot_replay": 0,
+    "transport_noise": 0,
+    "noise_baseline": 0
+  },
+  "false_ticket_count": 0,
+  "narrow_viewport_overflow_px": 0
+}
