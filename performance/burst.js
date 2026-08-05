@@ -13,6 +13,7 @@ const TOTAL_EVENTS = Number(__ENV.TOTAL_EVENTS || 5000);
 const DURATION_SECONDS = Number(__ENV.DURATION_SECONDS || 10);
 const DUPLICATE_EVERY = Number(__ENV.DUPLICATE_EVERY || 10);
 const DRAIN_TIMEOUT_SECONDS = Number(__ENV.DRAIN_TIMEOUT_SECONDS || 60);
+const MAX_DURATION_SECONDS = Number(__ENV.MAX_DURATION_SECONDS || 180);
 
 const uniqueAccepted = new Counter("unique_accepted");
 const duplicateRejected = new Counter("duplicate_rejected");
@@ -24,12 +25,19 @@ export const options = {
       executor: "shared-iterations",
       vus: 100,
       iterations: TOTAL_EVENTS,
-      maxDuration: `${DURATION_SECONDS + 20}s`,
+      // Measured ingest ceiling is well under 500/s, so a 10s cap would drop
+      // most iterations and leave the no-loss property untested. Every event is
+      // delivered and the achieved duration is reported instead.
+      maxDuration: `${MAX_DURATION_SECONDS}s`,
     },
   },
+  teardownTimeout: `${DRAIN_TIMEOUT_SECONDS + 60}s`,
   thresholds: {
     http_req_failed: ["rate<0.01"],
     unexpected_outcome: ["count==0"],
+    // Fails loudly if the duplicate path is never exercised, which is exactly
+    // what a device/sequence mismatch silently did on the first run.
+    duplicate_rejected: ["count>0"],
   },
 };
 
@@ -49,10 +57,13 @@ export function setup() {
 
 export default function (data) {
   const index = __ITER * 100 + __VU;
-  const device = data.devices[index % data.devices.length];
   // Every DUPLICATE_EVERY-th event repeats the previous fingerprint exactly.
   const isDuplicate = index % DUPLICATE_EVERY === 0 && index > 0;
   const sequence = isDuplicate ? index - 1 : index;
+  // The device must be derived from the sequence, not the raw index. Deriving it
+  // from the index sent each "duplicate" on a different device, so the
+  // fingerprint never collided and the duplicate path was never exercised.
+  const device = data.devices[sequence % data.devices.length];
 
   const payload = JSON.stringify({
     device_id: device.device_id,
@@ -93,7 +104,9 @@ export function teardown(data) {
   console.log(JSON.stringify({
     test: "burst",
     total_events: TOTAL_EVENTS,
+    target_duration_seconds: DURATION_SECONDS,
     duplicate_every: DUPLICATE_EVERY,
+    expected_duplicates: Math.floor(TOTAL_EVENTS / DUPLICATE_EVERY),
     backlog_remaining: readiness.unprocessed_count,
     drain_seconds: (Date.now() - startedAt) / 1000,
     drained_within_timeout: readiness.unprocessed_count <= data.backlogBefore,
