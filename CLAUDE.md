@@ -2,11 +2,9 @@
 
 ## Current state
 
-- Branch: `main`; Task 11 is complete in the pending commit.
-- Last committed task: Task 10 (`fb0edfa`), with follow-up formatting commit
-  `f51c60e`.
-- Tasks 1-10 are pushed. Task 11 adds the `/operations` workspace and is ready
-  to commit/push after this handoff file.
+- Branch: `main`; Task 11 is complete in commit `6631a8a` and pushed.
+- Last committed task: Task 11 (`6631a8a`).
+- Tasks 1-12 are pushed after the Task 12 commit below.
 - Do not create a branch/worktree. Never delete or modify `assignment/` without
   explicit approval. Keep `diary.md` updated for material decisions, failures,
   and verification.
@@ -53,6 +51,10 @@
 
 ## Next work
 
-- Task 12 is the incident-detail workflow; Task 13 is simulator UI.
-- User requested Terra high for Task 12 and Terra medium for Task 13, with
+- Task 12 is complete: selected detail, ticket actions with typed rejection,
+  immediate workspace refresh, evidence/hypothesis provenance, and bounded
+  English/Kannada explanation tabs. Final focused tests pass `4/4`, clean Vite
+  build and `git diff --check` pass, and an independent release review is READY.
+- Task 13 is next; use Terra medium as requested.
+- User requested Terra medium for Task 13, with
   careful credit use. Prefer Ponytail-minimal changes and focused TDD.

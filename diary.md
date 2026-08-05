@@ -720,6 +720,29 @@ decisions, design changes, implementation milestones, or verification results.
   file lock (`WinError 5`). Source, focused tests, and the committed graph inputs
   are unaffected; retry on the next task after the editor releases the lock.
 
+### 2026-08-05
+
+- [output] Task 12 adds a selected-incident detail panel to the operator queue.
+  It reuses the Task 8 detail and ticket endpoints and the Task 10 explanation
+  payload; no backend contract was added.
+- [decision] Keep the UI to one detail component: it shows corridor scope and
+  uninstrumented counts, inferred-topology estimates, evidence/ticket history,
+  only the state-allowed ticket action, typed repair rejection, and a clearly
+  non-authoritative generated/fallback/unavailable explanation state.
+- [failure] The initial clean-container test invocation could not load Rollup's
+  Alpine optional binary from the bind-mounted host `node_modules`. An anonymous
+  container dependency volume with `npm ci` isolated the Linux install without
+  changing repository dependencies. The first build then caught a widened
+  ticket-action string type; it was narrowed at the action selector.
+- [review-fix] Detail now renders immutable boundary/hypothesis history,
+  coordinates, confidence reasons, topology calibration, schedule overlap, and
+  per-event provenance. Successful ticket actions trigger the shared polling
+  refresh so queue, map, and status do not remain stale; typed conflicts retain
+  their code in the operator feedback.
+- [verification] Clean-container incident-detail tests passed `4 passed` and
+  TypeScript/Vite production build passed. `git diff --check` passed. Independent
+  release review found no blocker.
+
 ## Future Entry Format
 
 ### YYYY-MM-DD

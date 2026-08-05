@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type PollState<T> = { data?: T; updatedAt?: Date; error?: Error; loading: boolean };
+export type PollState<T> = { data?: T; updatedAt?: Date; error?: Error; loading: boolean; refresh: () => void };
+type InternalPollState<T> = Omit<PollState<T>, "refresh">;
 
 export function useVisiblePolling<T>(load: (signal: AbortSignal) => Promise<T>, intervalMs = 3000): PollState<T> {
-  const [state, setState] = useState<PollState<T>>({ loading: true });
+  const [state, setState] = useState<InternalPollState<T>>({ loading: true });
   const controller = useRef<AbortController | null>(null);
   const refresh = useCallback(() => {
     controller.current?.abort();
@@ -30,5 +31,5 @@ export function useVisiblePolling<T>(load: (signal: AbortSignal) => Promise<T>, 
     };
   }, [intervalMs, refresh]);
 
-  return state;
+  return { ...state, refresh };
 }
