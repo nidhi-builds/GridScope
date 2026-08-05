@@ -10,7 +10,8 @@ from app.db.models.telemetry import DetectionCandidate, DeviceStreamState, PoleE
 from app.detection.candidates import _feeder_coverage, evaluate_candidate
 from app.telemetry.ingestion import accept_payload
 from app.telemetry.schemas import TelemetryPayload
-from app.telemetry.worker import process_inbox_batch
+from app.telemetry import worker as worker_module
+from app.telemetry.worker import process_inbox_batch, run_worker
 from app.schedules.feed import ScheduleSnapshot
 
 
@@ -374,3 +375,23 @@ def test_live_child_device_issue_marks_the_dark_parent_suspect():
                 assert evidence.source_event_id == dark_event.event_id
         finally:
             transaction.rollback()
+
+
+def test_worker_never_runs_its_batch_on_the_event_loop(monkeypatch):
+    """Blocking the loop froze every request for the length of each batch and
+    capped sustained ingest at ~53 req/s against a database doing ~900 tps."""
+    import asyncio
+    import threading
+
+    stop = asyncio.Event()
+    observed: dict[str, int] = {}
+
+    def fake_batch(session, limit, now=None, schedules=None, simulator_run_id=None):
+        observed["worker_thread"] = threading.get_ident()
+        stop.set()
+        return None
+
+    monkeypatch.setattr(worker_module, "process_inbox_batch", fake_batch)
+    asyncio.run(run_worker(stop))
+
+    assert observed["worker_thread"] != threading.get_ident()

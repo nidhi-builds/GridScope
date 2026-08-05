@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     worker_batch_size: int = 100
     poll_interval_ms: int = 3000
+    # Ingest concurrency. Defaults sized so one Uvicorn process can serve the
+    # sustained-load target without exceeding PostgreSQL's default max_connections.
+    db_pool_size: int = 20
+    db_max_overflow: int = 40
+    request_thread_limit: int = 80
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

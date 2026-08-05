@@ -18,6 +18,9 @@ const duplicates = new Counter("events_duplicate");
 const rejected = new Rate("events_rejected");
 
 export const options = {
+  // The drain poll below can legitimately use the full timeout; k6's 60s default
+  // killed teardown and lost the drain measurement entirely on the first run.
+  teardownTimeout: `${DRAIN_TIMEOUT_SECONDS + 60}s`,
   scenarios: {
     sustained: {
       executor: "constant-arrival-rate",

@@ -159,15 +159,22 @@ def _expire_evidence(session: Session, now: datetime) -> None:
         }
 
 
+def _drain_once(batch_size: int, schedule_cache=None) -> None:
+    with SessionLocal.begin() as session:
+        now = datetime.now(UTC)
+        schedules = schedule_cache.current if schedule_cache else None
+        if schedule_cache and schedules is None:
+            schedules = ScheduleSnapshot((), now, stale=True)
+        process_inbox_batch(session, batch_size, now, schedules)
+
+
 async def run_worker(stop: asyncio.Event, schedule_cache=None) -> None:
     settings = get_settings()
     while not stop.is_set():
-        with SessionLocal.begin() as session:
-            now = datetime.now(UTC)
-            schedules = schedule_cache.current if schedule_cache else None
-            if schedule_cache and schedules is None:
-                schedules = ScheduleSnapshot((), now, stale=True)
-            process_inbox_batch(session, settings.worker_batch_size, now, schedules)
+        # The batch is blocking database work. Running it directly on the event
+        # loop froze every in-flight request for the length of each batch, which
+        # capped sustained ingest far below what the database can absorb.
+        await asyncio.to_thread(_drain_once, settings.worker_batch_size, schedule_cache)
         try:
             await asyncio.wait_for(stop.wait(), timeout=settings.poll_interval_ms / 1000)
         except TimeoutError:

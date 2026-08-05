@@ -58,13 +58,18 @@ class ScheduleCache:
             self.current = replace(self.current, stale=True)
 
 
+def _refresh_cache(feed: ScheduleFeed, cache: ScheduleCache, now) -> None:
+    try:
+        cache.store(feed.fetch(), now)
+    except Exception:
+        cache.record_failure(now)
+
+
 async def poll_schedule_feed(feed: ScheduleFeed, cache: ScheduleCache, stop: asyncio.Event, interval_seconds: float = 60) -> None:
     while not stop.is_set():
         now = datetime.now().astimezone()
-        try:
-            cache.store(feed.fetch(), now)
-        except Exception:
-            cache.record_failure(now)
+        # Fetching the feed touches the database; keep it off the event loop.
+        await asyncio.to_thread(_refresh_cache, feed, cache, now)
         try:
             await asyncio.wait_for(stop.wait(), timeout=interval_seconds)
         except TimeoutError:

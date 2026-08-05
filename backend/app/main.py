@@ -5,9 +5,11 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
+import anyio
 import asyncio
 
 from app.api.health import router as health_router
+from app.config import get_settings
 from app.api.incidents import router as incidents_router
 from app.api.network import router as network_router
 from app.api.operations import router as operations_router
@@ -32,6 +34,11 @@ class SpaStaticFiles(StaticFiles):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Synchronous route handlers run in anyio's threadpool, whose default of 40
+    # tokens caps ingest concurrency well below the connection pool.
+    limiter = anyio.to_thread.current_default_thread_limiter()
+    limiter.total_tokens = get_settings().request_thread_limit
+    app.state.thread_limit = limiter.total_tokens
     app.state.engine = engine
     stop_worker = asyncio.Event()
     stop_schedules = asyncio.Event()
