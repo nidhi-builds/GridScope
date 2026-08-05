@@ -7,7 +7,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models.assets import Device, DeviceAssignment, Pole, TopologyEdge, Transformer
-from app.db.models.incidents import Incident, IncidentBoundary, IncidentEvidence, PlannedOperation, ScheduledOutage, TicketEvent
+from app.db.models.incidents import AIExplanation, Incident, IncidentBoundary, IncidentEvidence, PlannedOperation, ScheduledOutage, TicketEvent
 from app.db.models.simulator import SimulatedFault, SimulatorRun
 from app.db.models.telemetry import DetectionCandidate, DeviceStreamState, PoleEvidenceState, TelemetryEvent
 from app.simulator.physics import emit_loss_events, simulate_scope_fault, simulate_span_fault
@@ -466,6 +466,9 @@ def reset_runs(session: Session) -> None:
         session.execute(delete(DetectionCandidate).where(DetectionCandidate.scope_key.like(f"sim:{run.id}:%")))
         incident_ids = list(session.scalars(select(Incident.id).where(Incident.simulation_id == run.id)))
         if incident_ids:
+            # Every table that references incidents must be cleared first, including
+            # ai_explanations, which was added after this reset path was written.
+            session.execute(delete(AIExplanation).where(AIExplanation.incident_id.in_(incident_ids)))
             session.execute(delete(PlannedOperation).where(PlannedOperation.incident_id.in_(incident_ids)))
             session.execute(delete(IncidentEvidence).where(IncidentEvidence.incident_id.in_(incident_ids)))
             session.execute(delete(IncidentBoundary).where(IncidentBoundary.incident_id.in_(incident_ids)))

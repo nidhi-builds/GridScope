@@ -4,13 +4,21 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, select
 
+from app.ai.client import GeminiRequestError
+from app.ai.service import create_explanation
+from app.config import Settings
 from app.db.models.assets import Device, Pole, TopologyEdge
-from app.db.models.incidents import Incident, IncidentBoundary, IncidentEvidence, ScheduledOutage, TicketEvent
+from app.db.models.incidents import AIExplanation, Incident, IncidentBoundary, IncidentEvidence, ScheduledOutage, TicketEvent
 from app.db.models.simulator import SimulatedFault, SimulatorRun
 from app.db.models.telemetry import DetectionCandidate, TelemetryEvent
 from app.seed import seed_if_empty
 from app.simulator.scenarios import SCENARIOS
 from app.simulator.service import repair_run, reset_runs, start_run
+
+
+def _offline_requester(facts, settings):
+    """Force the deterministic fallback so the test never calls a real model."""
+    raise GeminiRequestError("offline")
 
 
 EFFECT_FIELDS = {
@@ -124,6 +132,20 @@ def test_three_branch_faults_emit_one_span_incident_per_independent_branch(sessi
     assert run.actual_results["outcome"] == "matched"
     assert run.actual_results["incident_count"] == 3
     assert run.actual_results["classes"] == ("span", "span", "span")
+
+
+def test_reset_removes_ai_explanations_attached_to_simulated_incidents(session):
+    """Reset predates the AI explanation table; a generated explanation must not pin an incident."""
+    run = start_run(session, "known_span", 20260803)
+    incident = session.scalar(select(Incident).where(Incident.simulation_id == run.id))
+    assert incident is not None
+    create_explanation(session, incident, Settings(_env_file=None), _offline_requester)
+    assert session.scalar(select(func.count()).select_from(AIExplanation).where(AIExplanation.incident_id == incident.id)) == 1
+
+    reset_runs(session)
+
+    assert session.scalar(select(func.count()).select_from(AIExplanation)) == 0
+    assert session.scalar(select(func.count()).select_from(Incident).where(Incident.simulation_id == run.id)) == 0
 
 
 def test_reset_restores_future_anchor_stream_state_before_next_run(session):
