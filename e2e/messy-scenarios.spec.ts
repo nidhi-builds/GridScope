@@ -87,9 +87,9 @@ test("weak inferred topology localizes to a corridor and says the count is estim
   expect(["medium", "low"]).toContain(facts.confidence.level);
 
   const detail = await selectIncident(page, incidentId);
-  await expect(detail).toContainText("Search corridor");
+  await expect(detail).toContainText("Where to search");
   await expect(detail).toContainText("estimated");
-  await expect(detail).toContainText(/uninstrumented poles between/);
+  await expect(detail).toContainText(/wiring here was never recorded/i);
 });
 
 test("an unavailable API shows a state panel instead of an empty console", async ({ page }) => {

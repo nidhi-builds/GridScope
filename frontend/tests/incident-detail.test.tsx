@@ -19,9 +19,9 @@ describe("incident detail", () => {
     const onAction = vi.fn().mockRejectedValue({ code: "confirmed_dark_remains", incident: detail });
     render(<IncidentDetail detail={detail} onAction={onAction} />);
 
-    expect(screen.getByText("Search corridor")).toBeTruthy();
-    expect(screen.getByText(/3 uninstrumented poles/)).toBeTruthy();
-    expect(screen.getByText("Hypothesis history")).toBeTruthy();
+    expect(screen.getByText("Where to search")).toBeTruthy();
+    expect(screen.getByText(/3 poles in between that have no sensor/)).toBeTruthy();
+    expect(screen.getByText("How the estimate changed")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Report repair" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Report repair" }));
     await waitFor(() => expect(screen.getByText(/still reporting dark/)).toBeTruthy());
@@ -42,7 +42,7 @@ describe("incident detail", () => {
     render(<IncidentDetail detail={{ ...detail, status: "detected" }} onAction={vi.fn().mockResolvedValue({ incident: { ...detail, status: "acknowledged" } })} onChanged={onChanged} />);
     fireEvent.click(screen.getByRole("button", { name: "Acknowledge" }));
     await waitFor(() => expect(onChanged).toHaveBeenCalledOnce());
-    expect(screen.getByText(/acknowledged/)).toBeTruthy();
+    expect(screen.getByText(/acknowledged/i)).toBeTruthy();
   });
 
   it("uses the detail and typed ticket endpoints", async () => {

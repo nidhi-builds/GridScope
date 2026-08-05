@@ -85,12 +85,13 @@ describe("operator workspace", () => {
     expect(isGeometryForIncident(geometry, "new")).toBe(false);
   });
 
-  it("labels selected, registry, and inferred map semantics distinctly", () => {
+  it("explains each map symbol in words an operator can act on", () => {
     const html = renderToStaticMarkup(<MapLegend />);
 
-    expect(html).toContain("selected-boundary");
-    expect(html).toContain("registry");
-    expect(html).toContain("inferred");
+    expect(html).toContain("send the crew here");
+    expect(html).toContain("Exact span");
+    expect(html).toContain("Search corridor");
+    expect(html).toContain("wiring unrecorded");
   });
 
   it("reaches the API-unavailable state instead of loading forever on a cold-start failure", async () => {
