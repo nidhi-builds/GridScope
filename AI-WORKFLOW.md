@@ -8,6 +8,8 @@ How this was actually built.
 |---|---|
 | **OpenAI Codex (GPT-5.6)** | Tasks 1–12: schema and seed, topology inference and calibration, telemetry ingestion, evidence tiers, localization and classification, incident workflow and restoration, operational APIs, the simulator, the AI explanation feature, and the operator console |
 | **Claude (Opus)** | Tasks 13–14: the simulator and health UI, the end-to-end and load test suites, the measurement runners, the performance investigation, and these documents |
+| **Superpowers** (`executing-plans`, SDD) | The execution harness: turned each plan task into a brief, a patch, a review diff and a report, and carried context across a mid-project model switch |
+| **Ponytail** | A standing constraint on change size — small, direct, no speculative abstractions |
 | **Graphify** | A local code-knowledge graph for navigating the codebase without re-reading files |
 
 Model routing was decided per task in advance and recorded in
@@ -21,6 +23,43 @@ implement, verify, record the result in `diary.md`, commit, push. `diary.md` is
 the unedited working log — decisions, failures and verification in the order they
 happened, including the wrong turns.
 
+## The two skills that shaped the work
+
+**Superpowers — `executing-plans` and spec-driven development.** This is the
+harness the whole build ran inside. Rather than handing a model a task and taking
+whatever came back, each task in
+`2026-08-03-gridscope-implementation.md` was expanded into a brief, implemented as
+a patch, reviewed as a diff, and closed with a written report. Those artefacts are
+in `.superpowers/sdd/` — roughly four files per task, kept for every one of the
+fourteen.
+
+Three things it bought that a plain prompt loop does not:
+
+- **A review step that is not the author.** The patch and the review are separate
+  passes over the same change. Several of the rewrites in the section below —
+  including the dark-root grouping bug — were caught at review, before the code
+  reached a commit.
+- **Survivable model handoff.** This project changed models mid-stream, from Codex
+  at Task 12 to Claude at Task 13. The brief-and-report trail meant the second
+  model could reconstruct intent from artefacts instead of guessing from source.
+  That handoff is normally where an AI-built project loses the plot.
+- **Resumability.** Every session started by reading the plan, the diary and the
+  last task report. There was no session that began by re-deriving what the
+  project was.
+
+**Ponytail — minimal changes.** Stated at the top of every session: *small,
+direct, no speculative abstractions.* Left alone, models produce factories, base
+classes, config layers and helper modules nobody asked for, and each one is
+individually defensible. The compounding cost is a codebase too large to hold in
+mind — which matters enormously when the reviewer has to explain code a model
+wrote. Repeating this constraint every session is the reason the application is
+about 5,100 lines rather than three times that, and the reason the localization
+logic is readable end to end in one sitting.
+
+The two work against each other in a useful way. Superpowers adds process and
+wants to generate artefacts; Ponytail keeps the artefacts from becoming the
+product. Structure on the workflow, restraint on the code.
+
 ## What was delegated, and where the line was
 
 **Delegated wholesale:** boilerplate and mechanical translation. SQLAlchemy model
@@ -28,8 +67,9 @@ definitions, Alembic migrations, Pydantic schemas, React component scaffolding,
 CSS, the Docker and Compose setup, k6 script structure, and the repetitive parts
 of test fixtures.
 
-**Written and re-written by hand, repeatedly:** anything where being wrong is
-invisible.
+**Specified first, then rejected and re-specified until right:** anything where
+being wrong is invisible. The typing was still the model's; the rule it was
+implementing was not.
 
 - The **dark-root reduction**. The first generated version grouped dark poles by
   transformer, which merges genuinely separate faults. The rule that actually
@@ -49,7 +89,7 @@ invisible.
 
 The line: models were trusted with *how* to express something and never with
 *what* is true about the electrical network. Anything that decides whether a crew
-gets dispatched was reasoned through first and then written.
+gets dispatched was reasoned through first, then handed over to be written.
 
 ## Three times the AI was confidently wrong
 
@@ -130,10 +170,10 @@ end-to-end and load suites paid for themselves on their first run.
 
 ## How much is AI-generated
 
-Roughly **90% of the lines**, and close to **0% of the decisions that matter**.
+**100% of the lines**, and close to **0% of the decisions that matter**.
 
-About 5,100 lines of application code and 3,800 lines of tests. Nearly every line
-was typed by a model. But the architecture, the failure-mode analysis, the
+About 5,100 lines of application code and 3,800 lines of tests. Not one line was
+typed by hand. But the architecture, the failure-mode analysis, the
 localization rules, the confidence design, and every judgement about which
 failure mode is survivable were specified first and then implemented — and the
 generated version was rejected and rewritten whenever it took the easy path.
@@ -156,9 +196,8 @@ fault in a known topology produces the expected span, which is the only assertio
 that matters.
 
 **"Ponytail-style minimal changes: small, direct, no speculative abstractions."**
-Repeated every session. Models reach for factories, base classes and
-configuration layers unprompted. The codebase stayed small enough to keep in
-mind because this was said every time.
+Repeated every session — see the skills section above for why this one mattered
+more than any other single instruction.
 
 **"Report the actual value and the bottleneck without weakening the
 assertion."** Written into the plan before any measurement existed. It is why the
