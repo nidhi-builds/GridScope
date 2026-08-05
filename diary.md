@@ -788,6 +788,62 @@ decisions, design changes, implementation milestones, or verification results.
   (`tsc -b && vite build`) passed with no TypeScript errors.
 - [follow-up] Re-run the backend suite on the Windows host with Docker up:
   `test_readiness.py`, `test_operations.py`, and the simulator API tests.
+- [verification] Backend suite run on the Windows host with Docker up: 52 passed,
+  1 skipped across `tests/api` and `tests/simulator`. The four additive backend
+  fields are confirmed against a real database. Task 13 pushed as `befd35c`.
+- [failure] The first live `docker compose up` crash-looped with
+  `ImportError: cannot import name 'engine' from 'app.db' (unknown location)`.
+  The source was correct and tracked; the cached `gridscope-web` image had lost
+  `app/db/__init__.py`, so Python treated the directory as a namespace package.
+  `docker compose up -d --build` fixed it. This had been masked for the whole
+  project because the backend test command bind-mounts `backend:/app/backend`
+  over the image, so tests exercised fresh source while the image stayed broken.
+  Rebuild before any measurement or deployment run.
+- [failure] The Task 13 navigation rail was visually broken in a real browser:
+  labels were added to a `3.25rem` rail with `1.5rem` icons, so they overflowed
+  onto the content, and none of the seven new components had CSS. jsdom cannot
+  catch this — it has no layout. Fixed in `3da50aa`: a 12.5rem labelled rail that
+  collapses to icons below 760px, and one shared card style across the new views.
+- [decision] Live-browser inspection through the Chrome extension was attempted
+  first and abandoned: the extension could not reach `localhost:8000` even though
+  the same URL loaded in an ordinary tab and `curl` returned 200. The CSS defect
+  was instead identified from source. Playwright remains the only browser
+  verification path that actually runs.
+
+### 2026-08-05 (Task 14)
+
+- [output] Task 14 adds the correctness and performance evidence layer:
+  `playwright.config.ts`, three E2E specs, two k6 scripts, three measurement
+  runners, and three opt-in Compose runners. No application code changed.
+- [decision] Playwright runs against an already-running stack rather than a
+  server it starts itself, so every measured number describes the same image a
+  reviewer runs. Specs are serial with `workers: 1` because they share simulator
+  and incident state.
+- [decision] `browser-test` uses a pinned `node:22.14.0-bookworm` plus a pinned
+  `@playwright/test@1.54.1` that installs its own matching Chromium into a cached
+  volume, instead of a pinned Playwright image tag. A stale image tag can drift
+  from the npm package and fail with a version-mismatch error; this cannot.
+- [decision] `scripts/` is not copied into the application image, so the
+  measurement runners get their own `measure` service in the `tools` profile that
+  mounts `scripts/` read-only. `docker compose up` still starts only `db` and
+  `web`.
+- [decision] Accuracy definitions are stated in `measure_accuracy.py` rather than
+  left implicit: exact-span precision counts only runs that reported a span,
+  corridor containment requires the reported pole path to contain the hidden
+  truth edge, and inferred topology is expected to produce zero exact spans so
+  the PRD's "exact inferred output is disabled" branch is the one that applies.
+- [failure] `scripts/verify_submission.py` immediately found two real gaps on its
+  first run. The committed `openapi.json` has 12 routes and no simulator paths at
+  all, so it has been stale since Task 9 and misses the Task 13 events route. The
+  five required root documents exist but are zero bytes. Both are Task 15 work
+  and are recorded rather than patched here.
+- [verification] All measurement targets are unmeasured at commit time. The
+  agent environment has no Docker, browsers, or k6, so `performance/results/`
+  ships empty and `verify_submission.py` reports each missing result as a warning
+  rather than silently passing.
+- [follow-up] Run the suite in `performance/README.md` on the Windows host,
+  commit the raw JSON, and report any missed target with its actual value and
+  bottleneck. Regenerate `openapi.json` via `scripts/export_openapi.py`.
 
 ## Future Entry Format
 

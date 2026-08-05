@@ -40,5 +40,57 @@ services:
       - ./frontend:/workspace/frontend
     command: sh -c "npm ci && npm test -- --run"
 
+  # Opt-in runners. A plain `docker compose up` still starts only db and web.
+  # Browsers install at run time from a pinned @playwright/test version, so the
+  # runner cannot drift from the browser build the way a stale image tag can.
+  browser-test:
+    image: node:22.14.0-bookworm
+    profiles: ["tools"]
+    working_dir: /workspace
+    environment:
+      GRIDSCOPE_BASE_URL: http://web:8000
+      CI: "true"
+    volumes:
+      - ./e2e:/workspace/e2e
+      - ./playwright.config.ts:/workspace/playwright.config.ts:ro
+      - ./performance/results:/workspace/performance/results
+      - playwright-browsers:/root/.cache/ms-playwright
+    depends_on:
+      web:
+        condition: service_healthy
+    command: >
+      sh -c "npm init -y >/dev/null 2>&1
+      && npm install --no-save --no-audit --no-fund @playwright/test@1.54.1
+      && npx playwright install --with-deps chromium
+      && npx playwright test"
+
+  k6:
+    image: grafana/k6:0.54.0
+    profiles: ["tools"]
+    environment:
+      GRIDSCOPE_BASE_URL: http://web:8000
+    volumes:
+      - ./performance:/tests:ro
+      - ./performance/results:/results
+    depends_on:
+      web:
+        condition: service_healthy
+    entrypoint: ["k6"]
+
+  measure:
+    build: .
+    profiles: ["tools"]
+    working_dir: /app
+    environment:
+      GRIDSCOPE_BASE_URL: http://web:8000
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./performance/results:/app/performance/results
+    depends_on:
+      web:
+        condition: service_healthy
+    entrypoint: ["python"]
+
 volumes:
   postgres-data:
+  playwright-browsers:
