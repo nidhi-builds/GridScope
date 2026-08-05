@@ -1,8 +1,8 @@
-"""Scripted demo: inject a fault, show the localized ticket, prove the map data.
+"""End-to-end walkthrough of the public API: ingest, localize, ticket, verify.
 
-Everything here goes through the public API a device would use. Run it beside a
-screen recording; each step prints a heading, so the narration has something to
-point at.
+Every call here is one a device or an operator client could make. Each step
+prints a heading and the values it received, so the output doubles as a readable
+record of what the system decided and why.
 
     python scripts/demo_ingest.py                       # against localhost
     python scripts/demo_ingest.py --base-url https://<your-app>.onrender.com
