@@ -4,7 +4,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.exc import StaleDataError
 
 from app.api.schemas import Page
 from app.db import get_session
@@ -82,11 +84,26 @@ def repair(run_id: UUID, session: Session = Depends(get_session)) -> dict:
     except ValueError as error:
         session.rollback()
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except StaleDataError as error:
+        # A concurrent reset removed the fault mid-repair. That is a vanished run,
+        # not a server fault, so report it as one instead of a 500.
+        session.rollback()
+        raise HTTPException(status_code=404, detail="simulator run was reset during repair") from error
     return _run(session, result)
 
 
 @router.post("/reset")
 def reset(session: Session = Depends(get_session)) -> dict[str, str]:
-    reset_runs(session)
-    session.commit()
+    # The worker can commit a new ticket event for an incident between reset's
+    # child delete and its parent delete, which fails the foreign key. The window
+    # is small and the operation is idempotent, so a bounded retry clears it.
+    for attempt in range(3):
+        try:
+            reset_runs(session)
+            session.commit()
+            return {"status": "cleared"}
+        except IntegrityError:
+            session.rollback()
+            if attempt == 2:
+                raise HTTPException(status_code=503, detail="simulator reset lost a race with the worker; retry") from None
     return {"status": "cleared"}
