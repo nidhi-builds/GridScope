@@ -39,6 +39,30 @@ affected-pole count and a confidence level. Press **Repair fault**, then
 acknowledge, assign and report the repair in the incident panel. The ticket
 closes on restoration telemetry, not on your click.
 
+The generated incident is a link. Clicking it opens that ticket in place, so the
+fault can be repaired and the ticket worked without leaving the demo view.
+
+## The operations map
+
+The map draws the network, not just the ticket you clicked.
+
+- **Every pole, in its current state.** Green has power, red is confirmed dark,
+  grey has a device but is not reporting, amber has an unreliable sensor, hollow
+  has no sensor at all. Hover any pole for its code and state.
+- **Grey and hollow are different facts, deliberately.** Grey is a pole that
+  *should* be reporting and is not; hollow is a pole that never can. Neither is
+  evidence of an outage. This is the same rule that stops a dead battery from
+  raising a ticket, made visible.
+- **Every queued incident is drawn**, filtered in step with the queue. Filter the
+  list and the map follows.
+- **Clicking a ticket zooms to it** — first to the incident's own location, then
+  onto the exact span or search corridor once its geometry loads.
+- **A count strip** reports how many poles are dark, live, silent and
+  uninstrumented, so a network that has not reported yet cannot be mistaken for a
+  map that failed to load.
+
+Selection survives everything: switching tabs, reloading, or sharing the URL.
+
 The equivalent single command:
 
 ```bash
@@ -53,11 +77,26 @@ firmware-1.2 terminal silence, and duplicate/out-of-order/stale delivery.
 
 ## Live deployment
 
-The public URL and demo video link are in the submission email.
+<https://gridscope-zulr.onrender.com>
+
+The demo video link is in the submission email.
 
 The deployment runs on a free tier that **cold-starts**. If the first request
 hangs, give it up to 60 seconds rather than assuming it is down. Readiness is
 reported at `/api/v1/ready`.
+
+A ticket can be linked to directly — selection lives in the URL:
+
+```
+https://gridscope-zulr.onrender.com/operations?incident=<incident-id>
+```
+
+**The map may be mostly grey on a freshly deployed instance, and that is
+correct.** A pole is only drawn green once it has *reported* power. Until
+telemetry arrives, poles are either grey (has a device, has not reported) or
+hollow (no device at all) — never green and never red. The count strip on the map
+states this in numbers. Start a scenario on `/simulator` to see the network come
+alive.
 
 ## Documentation
 

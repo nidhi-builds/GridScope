@@ -7,7 +7,7 @@ How this was actually built.
 | Tool | Used for |
 |---|---|
 | **OpenAI Codex (GPT-5.6)** | Tasks 1–12: schema and seed, topology inference and calibration, telemetry ingestion, evidence tiers, localization and classification, incident workflow and restoration, operational APIs, the simulator, the AI explanation feature, and the operator console |
-| **Claude (Opus)** | Tasks 13–14: the simulator and health UI, the end-to-end and load test suites, the measurement runners, the performance investigation, and these documents |
+| **Claude (Opus)** | Tasks 13–14 and the final hardening pass: the simulator and health UI, the end-to-end and load test suites, the measurement runners, the performance investigation, the live network map, client-side routing, and these documents |
 | **Superpowers** (`executing-plans`, SDD) | The execution harness: turned each plan task into a brief, a patch, a review diff and a report, and carried context across a mid-project model switch |
 | **Ponytail** | A standing constraint on change size — small, direct, no speculative abstractions |
 | **Graphify** | A local code-knowledge graph for navigating the codebase without re-reading files |
@@ -91,7 +91,7 @@ The line: models were trusted with *how* to express something and never with
 *what* is true about the electrical network. Anything that decides whether a crew
 gets dispatched was reasoned through first, then handed over to be written.
 
-## Three times the AI was confidently wrong
+## Four times the AI was confidently wrong
 
 ### 1. Four wrong bottleneck diagnoses in a row
 
@@ -147,6 +147,23 @@ The pattern across all three: the AI-written *measurement* was less reliable tha
 the AI-written *system*. Every wrong number in this project came from the
 instrument, not the thing being measured.
 
+### 4. Eight tests broken by a test, then nearly blamed on a known bug
+
+A new test for the network endpoint inserted one row and mutated two others
+through the documented `session` fixture. Eight unrelated tests failed across
+five suites. The obvious reading was the isolation defect already written up in
+this repository — the failures matched its description exactly, and accepting
+that explanation would have shipped a contaminating test.
+
+What caught it was refusing the convenient answer: run the failing suites alone
+on a clean database first. They passed, which located the fault in the new test
+rather than in the old defect. The tests were rewritten to be read-only.
+
+The lesson is about documented weaknesses specifically. A known issue in a
+`DECISIONS.md` is a ready-made excuse for any failure that resembles it, and the
+cost of a wrong attribution is that a real defect gets filed as a familiar one
+and never fixed.
+
 ## Four real bugs the tests found
 
 Written up because they show what the test suites bought, and three of them were
@@ -178,9 +195,9 @@ localization rules, the confidence design, and every judgement about which
 failure mode is survivable were specified first and then implemented — and the
 generated version was rejected and rewritten whenever it took the easy path.
 
-The 26-commit history shows the shape of it: one commit per completed task
-through Task 14, then a run of `fix:` commits as the test suites found real
-defects.
+The commit history shows the shape of it: one commit per completed task through
+Task 14, then a run of `fix:` commits as the test suites — and a final review
+pass over the operator console — found real defects.
 
 ## Prompts and practices that worked
 
