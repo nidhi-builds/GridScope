@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { IncidentDetail } from "../src/features/incidents/IncidentDetail";
@@ -15,6 +16,26 @@ const detail = {
 };
 
 describe("incident detail", () => {
+  it("never offers a span for a feeder or transformer outage", () => {
+    // These have no upstream/downstream pole. The old wording rendered
+    // "between pole unknown and pole unknown", sending a crew to walk a span
+    // that does not exist.
+    const scoped = (fault_class: string, kind: string) => ({
+      ...detail, fault_class,
+      boundary: { kind, upstream_pole_id: null, downstream_pole_id: null, geometry: {} },
+    });
+
+    const feeder = renderToStaticMarkup(<IncidentDetail detail={scoped("feeder", "feeder") as never} />);
+    const transformer = renderToStaticMarkup(<IncidentDetail detail={scoped("dt", "transformer") as never} />);
+
+    expect(feeder).toContain("The whole feeder is out");
+    expect(transformer).toContain("The whole transformer area is out");
+    for (const html of [feeder, transformer]) {
+      expect(html).not.toContain("pole unknown");
+      expect(html).not.toContain("On the span between");
+    }
+  });
+
   it("shows corridor uncertainty, evidence, allowed repair action, and its typed rejection", async () => {
     const onAction = vi.fn().mockRejectedValue({ code: "confirmed_dark_remains", incident: detail });
     render(<IncidentDetail detail={detail} onAction={onAction} />);

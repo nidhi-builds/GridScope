@@ -85,6 +85,13 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
   };
   const path = detail.boundary.geometry.pole_path ?? [];
   const corridor = detail.boundary.kind === "corridor";
+  // A feeder or transformer outage has no upstream/downstream pole: the whole
+  // group below the asset is out. Printing "between pole unknown and pole
+  // unknown" sent a crew looking for a span that does not exist.
+  const scope = detail.boundary.kind === "feeder" || detail.fault_class === "feeder" ? "feeder"
+    : detail.boundary.kind === "transformer" || detail.fault_class === "dt" ? "dt"
+      : undefined;
+  const span = Boolean(detail.boundary.upstream_pole_id && detail.boundary.downstream_pole_id);
   const reasons = (detail.confidence.reasons ?? []).map(explainReason).filter(Boolean) as string[];
   const uninstrumented = Math.max(0, path.length - 2);
   return <aside className="incident-detail" aria-label="Incident detail">
@@ -97,12 +104,20 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
     {/* The one thing a crew is dispatched on. Everything else is supporting
         detail, so this gets the top of the panel and the visual weight. */}
     <div className="detail-where">
-      <span className="detail-where-label">{corridor ? "Where to search" : "Where the fault is"}</span>
-      {corridor
-        ? <p><b>Between pole {shortId(detail.boundary.upstream_pole_id)} and pole {shortId(detail.boundary.downstream_pole_id)}</b>
-          {uninstrumented > 0 ? `, with ${uninstrumented} pole${uninstrumented === 1 ? "" : "s"} in between that have no sensor` : ""}.
-          The wiring here was never recorded, so the system cannot narrow it further.</p>
-        : <p><b>On the span between pole {shortId(detail.boundary.upstream_pole_id)} and pole {shortId(detail.boundary.downstream_pole_id)}</b>.</p>}
+      <span className="detail-where-label">{scope ? "What is out" : corridor ? "Where to search" : "Where the fault is"}</span>
+      {scope === "feeder"
+        ? <p><b>The whole feeder is out</b> — {detail.affected_count} poles below it.
+          Start at the feeder source; this is not a single span.</p>
+        : scope === "dt"
+          ? <p><b>The whole transformer area is out</b> — {detail.affected_count} poles below it.
+            Check the transformer before walking the line.</p>
+          : !span
+            ? <p><b>Not narrowed to a span yet</b>. Use the coordinates below and the map.</p>
+            : corridor
+              ? <p><b>Between pole {shortId(detail.boundary.upstream_pole_id)} and pole {shortId(detail.boundary.downstream_pole_id)}</b>
+                {uninstrumented > 0 ? `, with ${uninstrumented} pole${uninstrumented === 1 ? "" : "s"} in between that have no sensor` : ""}.
+                The wiring here was never recorded, so the system cannot narrow it further.</p>
+              : <p><b>On the span between pole {shortId(detail.boundary.upstream_pole_id)} and pole {shortId(detail.boundary.downstream_pole_id)}</b>.</p>}
     </div>
 
     <div className="detail-facts">
