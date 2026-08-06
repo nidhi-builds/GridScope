@@ -9,7 +9,7 @@ import { loadIncidentGeometry, loadOperations } from "../src/api/client";
 import { IncidentQueue, sortIncidents } from "../src/features/operations/IncidentQueue";
 import { emptyFilters, filterIncidents, IncidentFilters } from "../src/features/operations/IncidentFilters";
 import { MapLegend } from "../src/features/operations/MapLegend";
-import { POLE_LABEL, POLE_STYLE } from "../src/features/operations/NetworkLayer";
+import { POLE_LABEL, POLE_STYLE, summariseNetwork } from "../src/features/operations/NetworkLayer";
 import { isGeometryForIncident } from "../src/features/operations/NetworkMap";
 import { OperationsPage } from "../src/features/operations/OperationsPage";
 import { OperationsProvider } from "../src/features/operations/OperationsProvider";
@@ -118,6 +118,23 @@ describe("operator workspace", () => {
     expect((await screen.findByLabelText("Status") as HTMLSelectElement).value).toBe("");
     // The full queue is back, so nothing was removed.
     expect(await screen.findByRole("button", { name: "resolved" })).toBeTruthy();
+  });
+
+  it("counts poles by state so a grid that has not reported is not mistaken for a broken map", () => {
+    const pole = (state?: string) => ({ type: "Feature" as const, properties: { asset: "pole", state }, geometry: { type: "Point" as const, coordinates: [77, 12] } });
+    const network = {
+      type: "FeatureCollection" as const,
+      features: [pole("unknown_silent"), pole("unknown_silent"), pole("confirmed_dark"), pole(undefined),
+        { type: "Feature" as const, properties: { asset: "transformer" }, geometry: { type: "Point" as const, coordinates: [77, 12] } }],
+    };
+
+    // Dark first: it is the only state that puts a crew in a van.
+    expect(summariseNetwork(network)).toEqual([
+      { state: "confirmed_dark", count: 1 },
+      { state: "unknown_silent", count: 2 },
+      { state: "uninstrumented", count: 1 },
+    ]);
+    expect(summariseNetwork(undefined)).toEqual([]);
   });
 
   it("never renders geometry from a previously selected incident", () => {

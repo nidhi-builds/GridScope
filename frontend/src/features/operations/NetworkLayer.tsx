@@ -24,6 +24,24 @@ export const POLE_LABEL: Record<string, string> = {
   uninstrumented: "No sensor on this pole",
 };
 
+/**
+ * Counts per state. A grid where nothing has reported yet is all grey, which
+ * looks identical to a broken map. Saying "3,700 not reporting" makes the
+ * difference between "no telemetry yet" and "no data loaded" obvious.
+ */
+export function summariseNetwork(network?: FeatureCollection): { state: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const feature of network?.features ?? []) {
+    const properties = feature.properties as { asset?: string; state?: string } | null;
+    if (properties?.asset !== "pole") continue;
+    const state = properties.state ?? "uninstrumented";
+    counts.set(state, (counts.get(state) ?? 0) + 1);
+  }
+  return ["confirmed_dark", "confirmed_live", "unknown_silent", "device_suspect", "uninstrumented"]
+    .filter((state) => counts.has(state))
+    .map((state) => ({ state, count: counts.get(state) as number }));
+}
+
 function poleLayer(feature: GeoJSON.Feature, latlng: L.LatLng): L.Layer {
   const properties = feature.properties as { asset?: string; state?: string; code?: string } | null;
   if (properties?.asset === "transformer") {

@@ -3,7 +3,7 @@ import L from "leaflet";
 import { GeoJSON, MapContainer, TileLayer, useMap } from "react-leaflet";
 import type { FeatureCollection, IncidentSummary } from "../../api/types";
 import { MapLegend } from "./MapLegend";
-import { NetworkLayer } from "./NetworkLayer";
+import { NetworkLayer, POLE_LABEL, POLE_STYLE, summariseNetwork } from "./NetworkLayer";
 import "leaflet/dist/leaflet.css";
 
 /**
@@ -80,6 +80,7 @@ export function NetworkMap({ incident, geometry, overview, network }: { incident
   // when the selected geometry finally arrived, it never zoomed in afterwards.
   const focus = incident ? selectedGeometry : (context.features.length ? context : network);
   const focusKey = `${incident?.id ?? "overview"}:${focus?.features.length ?? 0}`;
+  const summary = summariseNetwork(network);
   return <section className="network-map" data-testid="network-map" data-selected={incident?.id ?? ""} data-network-features={context.features.length} aria-label="Network map">
     <MapContainer center={center} zoom={13} scrollWheelZoom preferCanvas className="leaflet-map">
       <TileLayer attribution="© OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -88,6 +89,14 @@ export function NetworkMap({ incident, geometry, overview, network }: { incident
       {context.features.length > 0 && <GeoJSON key={`context-${context.features.length}`} data={context} style={{ color: "#c32929", weight: 2, opacity: 0.5 }} pointToLayer={(feature, latlng) => pointToLayer(feature, latlng, false)} />}
       {selectedGeometry && <GeoJSON key={incident?.id} data={selectedGeometry} style={{ color: "#c32929", weight: 5 }} pointToLayer={(feature, latlng) => pointToLayer(feature, latlng, true)} />}
       <FitBounds collection={focus} focusKey={focusKey} fallback={incident ? [incident.navigation.latitude, incident.navigation.longitude] : undefined} />
-    </MapContainer><MapLegend />
+    </MapContainer>
+    <div className="network-summary" aria-label="Network state summary">
+      {summary.length
+        ? summary.map(({ state, count }) => <span key={state}>
+          <i style={{ background: POLE_STYLE[state]?.fill, borderColor: POLE_STYLE[state]?.stroke }} aria-hidden="true" />
+          {count.toLocaleString()} {POLE_LABEL[state]?.toLowerCase() ?? state}
+        </span>)
+        : <span>No network data yet</span>}
+    </div><MapLegend />
   </section>;
 }
