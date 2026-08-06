@@ -21,11 +21,13 @@ services:
       APP_ENV: development
       LOG_LEVEL: INFO
       SEED: "true"
-      # Open on a live network rather than a grey one, and keep it live with
-      # routine heartbeats. Both are off by default for the test suites, which
-      # are written against a network that has reported nothing.
+      # Open on a live network rather than a grey one.
       SEED_BASELINE_LIVE: "true"
-      HEARTBEAT_SWEEP_SECONDS: "30"
+      # Routine heartbeats, OFF here on purpose. The sweep writes pole evidence
+      # continuously, and `pytest` runs against this same database — leaving it
+      # on corrupts test fixtures mid-run. Set it on the deployed service, or
+      # locally only when you are not running the suites.
+      HEARTBEAT_SWEEP_SECONDS: "0"
     depends_on:
       db:
         condition: service_healthy
