@@ -63,9 +63,9 @@ test("repair reported while poles are still dark is rejected with operator-safe 
 
   const detail = await selectIncident(page, incidentId);
   await detail.getByRole("button", { name: "Acknowledge" }).click();
-  await expect(detail).toContainText("acknowledged");
+  await expect(detail).toContainText(/acknowledged/i);
   await detail.getByRole("button", { name: "Assign crew" }).click();
-  await expect(detail).toContainText("crew assigned");
+  await expect(detail).toContainText(/crew assigned/i);
 
   // No repair telemetry has arrived, so restoration must not be accepted.
   await detail.getByRole("button", { name: "Report repair" }).click();

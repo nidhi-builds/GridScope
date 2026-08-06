@@ -50,10 +50,10 @@ test("known span fault runs from injection to telemetry-verified closure", async
   expect(dark).toBeLessThanOrEqual(evidenceTotal);
 
   await detail.getByRole("button", { name: "Acknowledge" }).click();
-  await expect(detail).toContainText("acknowledged");
+  await expect(detail).toContainText(/acknowledged/i);
 
   await detail.getByRole("button", { name: "Assign crew" }).click();
-  await expect(detail).toContainText("crew assigned");
+  await expect(detail).toContainText(/crew assigned/i);
 
   // Physical repair arrives as ordinary restoration telemetry, not a shortcut.
   const repairedAt = Date.now();

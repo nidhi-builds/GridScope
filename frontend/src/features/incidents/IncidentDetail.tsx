@@ -49,17 +49,21 @@ function explainReason(code: string): string | null {
 const shortId = (value?: string | null) => value ? value.slice(0, 8) : "unknown";
 const when = (value?: string | null) => value ? new Date(value).toLocaleString() : "unknown";
 
-export function IncidentDetail({ incidentId, detail: supplied, onAction, onChanged }: { incidentId?: string; detail?: Detail; onAction?: (action: Action) => Promise<unknown> | unknown; onChanged?: () => void }) {
+export function IncidentDetail({ incidentId, detail: supplied, onAction, onChanged, version }: { incidentId?: string; detail?: Detail; onAction?: (action: Action) => Promise<unknown> | unknown; onChanged?: () => void; version?: string }) {
   const [detail, setDetail] = useState<Detail | undefined>(supplied);
   const [message, setMessage] = useState("");
   const [language, setLanguage] = useState<"english" | "kannada">("english");
   useEffect(() => {
-    setDetail(supplied); setMessage("");
-    if (!incidentId || supplied) return;
+    // `version` is the incident's updated_at from the polled queue. Without it
+    // the panel fetched once and then went stale: restoration is verified by
+    // telemetry, so an operator watching this panel would never see the ticket
+    // move from "repair reported" to "closed" that it promises will happen.
+    setMessage("");
+    if (!incidentId || supplied) { setDetail(supplied); return; }
     const controller = new AbortController();
     void loadIncident(incidentId, controller.signal).then(setDetail).catch(() => !controller.signal.aborted && setMessage("Incident detail unavailable"));
     return () => controller.abort();
-  }, [incidentId, supplied]);
+  }, [incidentId, supplied, version]);
   if (!detail) return incidentId ? <aside className="incident-detail" aria-label="Incident detail">{message || "Loading incident detail..."}</aside> : null;
   // A malformed payload must degrade to a message, not tear down the workspace.
   // Losing the queue and the map because one detail response was wrong is the

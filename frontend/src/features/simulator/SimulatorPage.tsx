@@ -14,7 +14,7 @@ const DEFAULT_SEED = 20260803;
 const LAST_RUN = "gridscope.simulator.last-run";
 
 export function SimulatorPage() {
-  const { selectedIncidentId, select, refresh } = useOperations();
+  const { selectedIncidentId, selected, select, refresh } = useOperations();
   const [scenarios, setScenarios] = useState<SimulatorScenario[]>([]);
   const [scenarioKey, setScenarioKey] = useState("");
   const [seed, setSeed] = useState(DEFAULT_SEED);
@@ -85,7 +85,7 @@ export function SimulatorPage() {
     {/* The ticket you selected in Operations travels with you, so a fault can be
         repaired here and acknowledged there without losing your place. */}
     {selectedIncidentId && <section className="simulator-ticket" aria-label="Selected incident ticket">
-      <IncidentDetail incidentId={selectedIncidentId} onChanged={refresh} />
+      <IncidentDetail incidentId={selectedIncidentId} onChanged={refresh} version={selected?.updated_at} />
       <button onClick={() => select(undefined)}>Clear selected ticket</button>
     </section>}
     {run
