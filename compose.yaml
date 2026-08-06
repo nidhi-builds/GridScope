@@ -21,12 +21,15 @@ services:
       APP_ENV: development
       LOG_LEVEL: INFO
       SEED: "true"
-      # Open on a live network rather than a grey one.
-      SEED_BASELINE_LIVE: "true"
-      # Routine heartbeats, OFF here on purpose. The sweep writes pole evidence
-      # continuously, and `pytest` runs against this same database — leaving it
-      # on corrupts test fixtures mid-run. Set it on the deployed service, or
-      # locally only when you are not running the suites.
+      # Both OFF here on purpose, and this is not timidity.
+      #
+      # `pytest` runs against this same database. Every detection, correlation
+      # and telemetry test is written against a network that has reported
+      # nothing, so seeding baseline live evidence changes downstream coverage
+      # and quorum and breaks them; the sweep additionally writes evidence rows
+      # *while* fixtures are being built. Set both on the deployed service, where
+      # no test suite runs, or locally only when you are not running the suites.
+      SEED_BASELINE_LIVE: "false"
       HEARTBEAT_SWEEP_SECONDS: "0"
     depends_on:
       db:
