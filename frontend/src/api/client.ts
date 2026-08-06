@@ -32,6 +32,11 @@ export function loadIncidentGeometry(incidentId: string, signal?: AbortSignal): 
   return request<FeatureCollection>(`/network/incidents/${encodeURIComponent(incidentId)}`, signal);
 }
 
+/** The whole live network: poles with their current state, plus recorded wiring. */
+export function loadNetwork(signal?: AbortSignal): Promise<FeatureCollection> {
+  return request<FeatureCollection>("/network/poles", signal);
+}
+
 export function loadIncident(incidentId: string, signal?: AbortSignal): Promise<IncidentDetail> {
   return request<IncidentDetail>(`/incidents/${encodeURIComponent(incidentId)}`, signal);
 }

@@ -9,6 +9,7 @@ import { loadIncidentGeometry, loadOperations } from "../src/api/client";
 import { IncidentQueue, sortIncidents } from "../src/features/operations/IncidentQueue";
 import { emptyFilters, filterIncidents, IncidentFilters } from "../src/features/operations/IncidentFilters";
 import { MapLegend } from "../src/features/operations/MapLegend";
+import { POLE_LABEL, POLE_STYLE } from "../src/features/operations/NetworkLayer";
 import { isGeometryForIncident } from "../src/features/operations/NetworkMap";
 import { OperationsPage } from "../src/features/operations/OperationsPage";
 import { OperationsProvider } from "../src/features/operations/OperationsProvider";
@@ -136,6 +137,18 @@ describe("operator workspace", () => {
     expect(html).toContain("Exact span");
     expect(html).toContain("Search corridor");
     expect(html).toContain("wiring unrecorded");
+  });
+
+  it("distinguishes a silent pole from one that has no sensor at all", () => {
+    const html = renderToStaticMarkup(<MapLegend />);
+
+    // Silence is an absence of information, never evidence of an outage. The map
+    // must not let an operator read grey as dark.
+    expect(html).toContain("Not reporting");
+    expect(html).toContain("never assumed dark");
+    expect(html).toContain("No sensor");
+    expect(POLE_LABEL.unknown_silent).not.toEqual(POLE_LABEL.uninstrumented);
+    expect(POLE_STYLE.confirmed_dark.fill).not.toEqual(POLE_STYLE.unknown_silent.fill);
   });
 
   it("reaches the API-unavailable state instead of loading forever on a cold-start failure", async () => {

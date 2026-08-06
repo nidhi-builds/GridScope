@@ -88,9 +88,16 @@ button, select { font: inherit; }
   column-gap: .2rem; padding: .1rem .55rem; }
 .legend-row b { font-weight: 700; color: #172033; }
 .legend-row small { grid-column: 2; color: #5b687b; font-size: .66rem; }
+.map-legend { max-height: 60vh; overflow: auto; }
+.legend-group { margin: .5rem 0 .15rem; padding: 0 .55rem; font-size: .62rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em; color: #8792a4; }
 .map-legend .dot { display: inline-block; border-radius: 50%; justify-self: center; }
 .map-legend .dot.fault { width: .95rem; height: .95rem; background: #c32929; border: 3px solid #7d1414; }
-.map-legend .dot.pole { width: .55rem; height: .55rem; background: #c32929; opacity: .6; border: 1px solid #c32929; }
+.map-legend .dot.live { width: .6rem; height: .6rem; background: #1f9e57; border: 1px solid #12703c; }
+.map-legend .dot.dark { width: .75rem; height: .75rem; background: #c32929; border: 1px solid #7d1414; }
+.map-legend .dot.silent { width: .6rem; height: .6rem; background: #8792a4; border: 1px solid #5b687b; }
+.map-legend .dot.suspect { width: .65rem; height: .65rem; background: #e0a030; border: 1px solid #8a5a00; }
+.map-legend .dot.none { width: .5rem; height: .5rem; background: #fff; border: 1px solid #aab4c4; }
 .map-legend .dot.transformer { width: .8rem; height: .8rem; background: #12233f; border: 2px solid #12233f; }
 .map-legend .line { display: inline-block; width: 1.4rem; justify-self: center; }
 .map-legend .line.exact { border-top: 5px solid #c32929; }
