@@ -13,6 +13,8 @@ export type IncidentSummary = {
   transformer_id: string | null;
   pole_id: string | null;
   updated_at: string;
+  /** Null for a real incident; set when a simulator run created it. */
+  simulation_id?: string | null;
 };
 
 export type Page<T> = { items: T[]; page: number; page_size: number; total: number };

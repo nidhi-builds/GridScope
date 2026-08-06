@@ -16,6 +16,16 @@ const detail = {
 };
 
 describe("incident detail", () => {
+  it("offers the demo repair on any simulated ticket, on whichever route it is shown", () => {
+    const simulated = renderToStaticMarkup(<IncidentDetail detail={{ ...detail, simulation_id: "RUN-1" } as never} />);
+    const real = renderToStaticMarkup(<IncidentDetail detail={detail as never} />);
+
+    expect(simulated).toContain("Repair this fault (demo)");
+    // A real incident has no simulation behind it, so the demo action must not
+    // appear at all — a crew cannot be dispatched by a button.
+    expect(real).not.toContain("Repair this fault (demo)");
+  });
+
   it("never offers a span for a feeder or transformer outage", () => {
     // These have no upstream/downstream pole. The old wording rendered
     // "between pole unknown and pole unknown", sending a crew to walk a span

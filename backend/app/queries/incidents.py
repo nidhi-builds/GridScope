@@ -67,6 +67,10 @@ def _summary(incident: Incident, topology: dict | None = None) -> dict:
         "pin": {"value": incident.pin_code, "source": incident.pin_source},
         "feeder_id": _uuid(incident.feeder_id), "transformer_id": _uuid(incident.transformer_id),
         "pole_id": _uuid(incident.pole_id), "updated_at": incident.updated_at,
+        # Read-only, and null for any real incident. It lets the console offer the
+        # demo repair on whichever ticket you happen to be looking at, instead of
+        # only on the simulator route.
+        "simulation_id": _uuid(incident.simulation_id),
     }
 
 

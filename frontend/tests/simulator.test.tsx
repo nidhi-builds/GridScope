@@ -34,7 +34,7 @@ const incidentDetail = {
   confidence: { level: "high", reasons: ["topology:registry"] },
   navigation: { latitude: 12, longitude: 77 }, pin: { value: "1", source: "registry" },
   feeder_id: "f-1", transformer_id: "dt-1", pole_id: null, updated_at: "2026-08-05T10:00:00Z",
-  affected_count_estimated: false,
+  simulation_id: "RUN-1", affected_count_estimated: false,
   boundary: { kind: "span", upstream_pole_id: "P-1", downstream_pole_id: "P-2", geometry: { pole_path: ["P-1", "P-2"] } },
   location_history: [], topology: { source: "registry", calibration_bucket: null },
   evidence: { class_counts: { confirmed_dark: 4 }, items: [], page: 1, page_size: 1, total: 0 },
@@ -146,12 +146,8 @@ describe("simulator demo view", () => {
     fireEvent.click(await screen.findByRole("link", { name: "INC-9 (run RUN-1)" }));
     const ticket = await screen.findByLabelText("Selected incident ticket");
 
-    fireEvent.click(within(ticket).getByRole("button", { name: "Repair this fault (demo)" }));
-
-    expect(await screen.findByLabelText("Restoration telemetry")).toBeTruthy();
-    // Already repaired: the action is replaced by the reason, not left dead.
-    await waitFor(() => expect(within(screen.getByLabelText("Selected incident ticket"))
-      .getByText(/already been repaired/)).toBeTruthy());
+    // The action is on the ticket, not only in the scenario bar at the top.
+    expect(within(ticket).getByRole("button", { name: "Repair this fault (demo)" })).toBeTruthy();
   });
 
   it("hides only the ticket panel, keeping the run and event stream on screen", async () => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { loadIncident, ticketAction } from "../../api/client";
+import { loadIncident, repairRun, ticketAction } from "../../api/client";
 import type { IncidentDetail as Detail } from "../../api/types";
 
 type Action = "acknowledge" | "assign" | "report-resolved";
@@ -53,6 +53,7 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
   const [detail, setDetail] = useState<Detail | undefined>(supplied);
   const [message, setMessage] = useState("");
   const [language, setLanguage] = useState<"english" | "kannada">("english");
+  const [working, setWorking] = useState(false);
   useEffect(() => {
     // `version` is the incident's updated_at from the polled queue. Without it
     // the panel fetched once and then went stale: restoration is verified by
@@ -81,6 +82,21 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
       const rejected = error as { code?: string; incident?: Detail };
       if (rejected.incident) setDetail(rejected.incident);
       setMessage(rejected.code === "confirmed_dark_remains" ? "Repair rejected: poles are still reporting dark." : `Ticket update rejected: ${rejected.code ?? "unavailable"}.`);
+    }
+  };
+  /** Restore power in the simulated world, then let the normal pipeline close it. */
+  const fixFault = async () => {
+    if (!detail.simulation_id) return;
+    setWorking(true);
+    setMessage("");
+    try {
+      await repairRun(detail.simulation_id);
+      setDetail(await loadIncident(detail.id));
+      onChanged?.();
+    } catch {
+      setMessage("The simulated repair could not be applied.");
+    } finally {
+      setWorking(false);
     }
   };
   const path = detail.boundary.geometry.pole_path ?? [];
@@ -126,7 +142,15 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
       <div><span className="label">Area PIN</span><span>{detail.pin.value ?? "not on record"}</span></div>
     </div>
 
-    {action && <button className="ticket-action" onClick={repair}>{action.label}</button>}{message && <p role="alert">{message}</p>}
+    <div className="ticket-actions">
+      {action && <button className="ticket-action" onClick={repair} disabled={working}>{action.label}</button>}
+      {/* The demo repair belongs on whichever ticket the operator is looking at,
+          not only on the simulator route. It restores power in the simulated
+          world; the telemetry that follows is what actually closes the ticket. */}
+      {detail.simulation_id && detail.status !== "closed" && detail.status !== "verified" &&
+        <button className="demo-action" onClick={fixFault} disabled={working}>Repair this fault (demo)</button>}
+    </div>
+    {message && <p role="alert">{message}</p>}
     {/* Stated up front, not only once the ticket reaches "resolved". */}
     {!action && detail.status === "detected" ? null : <p className="detail-note">
       {detail.status === "resolved" ? "Repair reported. Waiting for the affected poles to report power and hold it for 30 seconds. No manual close."

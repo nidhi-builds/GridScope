@@ -65,7 +65,7 @@ button, select { font: inherit; }
 .detail-more > summary { cursor: pointer; font-size: .74rem; font-weight: 700; color: #5b687b;
   text-transform: uppercase; letter-spacing: .03em; padding: .2rem 0; }
 .detail-reference { font-size: .7rem; color: #8792a4; word-break: break-all; }
-.ticket-action { margin: .2rem 0 .4rem; padding: .45rem .9rem; border: 0; border-radius: .3rem;
+.ticket-action, .demo-action { margin: .2rem 0 .4rem; padding: .45rem .9rem; border: 0; border-radius: .3rem;
   background: #164fa4; color: #fff; font-weight: 700; cursor: pointer; }
 .panel-dismiss { margin-top: .5rem; padding: .35rem .7rem; border: 1px solid #c3cdde;
   background: #fff; border-radius: .3rem; font-size: .74rem; color: #5b687b; cursor: pointer; }
@@ -142,3 +142,6 @@ tr.event-restored td { background: #f2fbf5; }
   .rail-label { display: none; }
   .run-comparison, .event-stream, .device-health-panel, .planned-list, .system-health { margin: .75rem; }
 }
+
+.demo-action { background: #8a5a00; }
+.ticket-actions button:disabled { opacity: .55; cursor: default; }

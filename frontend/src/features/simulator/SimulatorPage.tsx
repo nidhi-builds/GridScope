@@ -98,21 +98,9 @@ export function SimulatorPage() {
         repaired here and acknowledged there without losing your place. */}
     {selectedIncidentId && <section className="simulator-ticket" aria-label="Selected incident ticket">
       <IncidentDetail incidentId={selectedIncidentId} onChanged={refresh} version={selected?.updated_at} />
-      <div className="ticket-actions">
-        {/* Repairing belongs next to the ticket you are looking at, not buried in
-            the scenario bar at the top of the page. It is still a demo action:
-            it restores power in the simulated world, which is what then produces
-            the telemetry that closes the ticket. */}
-        {canRepair
-          ? <button className="ticket-action" onClick={onRepair} disabled={busy}>Repair this fault (demo)</button>
-          : <span className="control-hint">{run?.actual?.repair_outcome
-            ? "This fault has already been repaired. Press Reset to run it again."
-            : "Start a scenario to create a repairable fault."}</span>}
-        {/* "Clear ticket" read like a ticket action — dangerously so on a resolved
-            ticket, where closing is telemetry's job and never an operator's. This
-            only hides the panel. */}
-        <button className="panel-dismiss" onClick={() => select(undefined)}>Hide this ticket</button>
-      </div>
+      {/* The repair action itself now lives inside IncidentDetail, so it appears
+          on this ticket and on the same ticket in Operations identically. */}
+      <button className="panel-dismiss" onClick={() => select(undefined)}>Hide this ticket</button>
     </section>}
     {run
       ? <><RunComparison run={run} onSelectIncident={select} selectedIncidentId={selectedIncidentId} /><EventStream events={events} duplicateAttempts={duplicates} repaired={Boolean(run.actual?.repair_outcome)} /></>
