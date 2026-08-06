@@ -299,13 +299,43 @@ parameter.
   so the published 0.09s p95 is probably still honest — but it has not been
   re-measured, and it should be before that number is quoted again.
 
-- **A newly seeded deployment shows a grey map, which reads as broken.** No pole
-  is green until it has reported, and scenarios only emit telemetry for the
-  devices they involve. This is correct behaviour — inventing a green pole would
-  be exactly the sin the system refuses elsewhere — but it is a poor first
-  impression. A count strip now states the numbers explicitly. The proper fix is
-  a baseline heartbeat per online device at seed time, which shifts the
-  `noise_baseline` scenario's expectations and was not worth changing this late.
+- **The live network map is the least finished thing here, and it is the one I
+  would go back to first.** The endpoint is verified and the map draws every pole
+  in its recorded state, but the *live* half of that promise landed last and is
+  the least proven.
+
+  What is actually true: nothing in the system generated routine telemetry.
+  Devices heartbeat every fifteen minutes in the real world, and that traffic is
+  what continuously establishes `confirmed_live` — but the simulator only emits
+  events for the devices a scenario involves. So every pole sat at
+  `unknown_silent` and the console opened on a grey map. Grey was the honest
+  answer, and inventing a green pole would have been exactly the sin the system
+  refuses everywhere else, but a reviewer cannot tell an honest grey map from a
+  broken one.
+
+  Two mechanisms were added late to close this: a seed baseline marking online
+  devices as last reporting energised, and a periodic heartbeat sweep. Both are
+  **off by default** because they change the starting evidence every detection
+  test is written against, and the full suite has not been run with them on. The
+  sweep deliberately consults simulator ground truth and skips de-energized
+  poles — without that it would have kept publishing firmware-1.2 poles as live
+  after they went dark, converting the one scenario the system honestly admits
+  it cannot observe into a false all-clear. That trap is the reason this belongs
+  in the simulator layer and not in telemetry.
+
+  What is still missing, in order: confirmation that the detection suite passes
+  with both flags on; a re-measurement of `ui-load.json`, which predates the map
+  drawing anything; and a decision on whether the sweep should write real
+  telemetry events through the ingest path rather than updating evidence state
+  directly. The last is the honest version — the current sweep bypasses the
+  inbox, which is defensible for a demo device simulator but is not what a real
+  device does.
+
+  The first thing I would do with more time is finish this properly and then
+  prove it on screen, because the restoration loop — live, dark during the fault,
+  live again once the poles report back — is the clearest single demonstration
+  that this system is driven by telemetry rather than by an operator's click, and
+  right now that story is told better by the event stream than by the map.
 - **`openapi.json` in the repository is stale** — 12 routes, no simulator paths.
   The live `/openapi.json` is generated and correct; the committed snapshot has
   not been regenerated since Task 9.
@@ -384,8 +414,16 @@ truth cannot answer it. This is the highest-value item on the list for the
 product and the lowest-certainty for the schedule, which is why it sits here
 rather than in week one.
 
-**9. Baseline heartbeats at seed time**, so a fresh deployment shows a live
-network instead of a grey one. Cosmetic, but it is the first thing anyone sees.
+**9. Finish the live network map.** The mechanisms exist — a seed baseline and a
+periodic heartbeat sweep — but both ship disabled, unproven against the detection
+suite, and the sweep updates evidence state directly instead of pushing real
+telemetry through the inbox. Finishing means: run the suite with both enabled and
+fix whatever moves, convert the sweep to emit genuine heartbeat events so it
+exercises the same path a real device does, re-measure `ui-load.json`, and then
+demonstrate the full loop on screen — green, red under fault, green again once
+the poles report back. Listed ninth by cost of being wrong, but it is the item I
+would personally pick up first: it is the difference between a console that
+*claims* to be telemetry-driven and one that visibly is.
 
 **10. WebSocket push** for the console, keeping polling as the fallback. Detection
 is already 4.85s p95 against a 120s target, so this improves feel, not capability.
