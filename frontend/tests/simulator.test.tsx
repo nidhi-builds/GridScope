@@ -140,6 +140,20 @@ describe("simulator demo view", () => {
     expect(document.querySelectorAll("tr.event-restored")).toHaveLength(2);
   });
 
+  it("offers the repair action on the ticket itself, not only in the scenario bar", async () => {
+    restorationApi();
+    await start();
+    fireEvent.click(await screen.findByRole("link", { name: "INC-9 (run RUN-1)" }));
+    const ticket = await screen.findByLabelText("Selected incident ticket");
+
+    fireEvent.click(within(ticket).getByRole("button", { name: "Repair this fault (demo)" }));
+
+    expect(await screen.findByLabelText("Restoration telemetry")).toBeTruthy();
+    // Already repaired: the action is replaced by the reason, not left dead.
+    await waitFor(() => expect(within(screen.getByLabelText("Selected incident ticket"))
+      .getByText(/already been repaired/)).toBeTruthy());
+  });
+
   it("hides only the ticket panel, keeping the run and event stream on screen", async () => {
     mockApi();
     await start();

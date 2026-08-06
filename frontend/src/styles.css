@@ -47,6 +47,10 @@ button, select { font: inherit; }
 .system-health { margin: 1rem 1.25rem; padding: 0; list-style: none; display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
 .system-health li { padding: .75rem 1rem; background: white; border: 1px solid #dbe3ef; border-radius: .4rem; font-size: .88rem; }
 
+.ticket-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-top: .6rem;
+  padding-top: .6rem; border-top: 1px solid #e5eaf2; }
+.ticket-actions .control-hint { flex-basis: auto; margin: 0; }
+
 /* A disabled control must say why it is disabled. */
 .control-hint { flex-basis: 100%; margin: .1rem 0 0; font-size: .74rem; color: #8a5a00; }
 

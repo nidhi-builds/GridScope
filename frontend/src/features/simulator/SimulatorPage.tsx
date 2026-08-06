@@ -50,14 +50,25 @@ export function SimulatorPage() {
     setEvents((await loadRunEvents(next.id).catch(() => undefined))?.items ?? []);
   };
 
+  /**
+   * Every control is disabled while an action is in flight. That is only safe if
+   * `busy` is guaranteed to clear — a request that never settles (a sleeping
+   * free-tier instance, a dropped connection) otherwise locks the entire view
+   * with no way out and no explanation.
+   */
   const guard = async (work: () => Promise<void>, failure: string) => {
     setBusy(true);
     setMessage("");
+    const stuck = window.setTimeout(() => {
+      setBusy(false);
+      setMessage("That is taking longer than expected — the service may be waking up. Nothing was lost; try again.");
+    }, 30_000);
     try {
       await work();
     } catch {
       setMessage(failure);
     } finally {
+      window.clearTimeout(stuck);
       setBusy(false);
     }
   };
@@ -73,11 +84,12 @@ export function SimulatorPage() {
   }, "The simulator could not be reset.");
 
   const duplicates = Number(run?.actual?.effect_evidence?.duplicate?.duplicate_attempts ?? 0);
+  const canRepair = Boolean(run) && !run?.actual?.repair_outcome;
   return <AppShell>
     <header className="demo-banner"><h1>Simulator</h1><p>Demo view — simulated faults and repairs are not operator workflow.</p></header>
     <ScenarioControls
       scenarios={scenarios} scenarioKey={scenarioKey} seed={seed} busy={busy}
-      canRepair={Boolean(run) && !run?.actual?.repair_outcome}
+      canRepair={canRepair}
       onScenarioChange={setScenarioKey} onSeedChange={setSeed}
       onStart={onStart} onRepair={onRepair} onReset={onReset}
     />
@@ -86,10 +98,21 @@ export function SimulatorPage() {
         repaired here and acknowledged there without losing your place. */}
     {selectedIncidentId && <section className="simulator-ticket" aria-label="Selected incident ticket">
       <IncidentDetail incidentId={selectedIncidentId} onChanged={refresh} version={selected?.updated_at} />
-      {/* "Clear ticket" read like a ticket action — dangerously so on a resolved
-          ticket, where closing is telemetry's job and never an operator's. This
-          only hides the panel. */}
-      <button className="panel-dismiss" onClick={() => select(undefined)}>Hide this ticket</button>
+      <div className="ticket-actions">
+        {/* Repairing belongs next to the ticket you are looking at, not buried in
+            the scenario bar at the top of the page. It is still a demo action:
+            it restores power in the simulated world, which is what then produces
+            the telemetry that closes the ticket. */}
+        {canRepair
+          ? <button className="ticket-action" onClick={onRepair} disabled={busy}>Repair this fault (demo)</button>
+          : <span className="control-hint">{run?.actual?.repair_outcome
+            ? "This fault has already been repaired. Press Reset to run it again."
+            : "Start a scenario to create a repairable fault."}</span>}
+        {/* "Clear ticket" read like a ticket action — dangerously so on a resolved
+            ticket, where closing is telemetry's job and never an operator's. This
+            only hides the panel. */}
+        <button className="panel-dismiss" onClick={() => select(undefined)}>Hide this ticket</button>
+      </div>
     </section>}
     {run
       ? <><RunComparison run={run} onSelectIncident={select} selectedIncidentId={selectedIncidentId} /><EventStream events={events} duplicateAttempts={duplicates} repaired={Boolean(run.actual?.repair_outcome)} /></>
