@@ -97,7 +97,7 @@ export function SimulatorPage() {
     {/* The ticket you selected in Operations travels with you, so a fault can be
         repaired here and acknowledged there without losing your place. */}
     {selectedIncidentId && <section className="simulator-ticket" aria-label="Selected incident ticket">
-      <IncidentDetail incidentId={selectedIncidentId} onChanged={refresh} version={selected?.updated_at} />
+      <IncidentDetail incidentId={selectedIncidentId} onChanged={refresh} version={selected?.updated_at} allowDemoRepair />
       {/* The repair action itself now lives inside IncidentDetail, so it appears
           on this ticket and on the same ticket in Operations identically. */}
       <button className="panel-dismiss" onClick={() => select(undefined)}>Hide this ticket</button>

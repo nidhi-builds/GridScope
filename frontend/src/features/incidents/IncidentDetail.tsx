@@ -49,7 +49,7 @@ function explainReason(code: string): string | null {
 const shortId = (value?: string | null) => value ? value.slice(0, 8) : "unknown";
 const when = (value?: string | null) => value ? new Date(value).toLocaleString() : "unknown";
 
-export function IncidentDetail({ incidentId, detail: supplied, onAction, onChanged, version }: { incidentId?: string; detail?: Detail; onAction?: (action: Action) => Promise<unknown> | unknown; onChanged?: () => void; version?: string }) {
+export function IncidentDetail({ incidentId, detail: supplied, onAction, onChanged, version, allowDemoRepair = false }: { incidentId?: string; detail?: Detail; onAction?: (action: Action) => Promise<unknown> | unknown; onChanged?: () => void; version?: string; allowDemoRepair?: boolean }) {
   const [detail, setDetail] = useState<Detail | undefined>(supplied);
   const [message, setMessage] = useState("");
   const [language, setLanguage] = useState<"english" | "kannada">("english");
@@ -144,10 +144,10 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
 
     <div className="ticket-actions">
       {action && <button className="ticket-action" onClick={repair} disabled={working}>{action.label}</button>}
-      {/* The demo repair belongs on whichever ticket the operator is looking at,
-          not only on the simulator route. It restores power in the simulated
-          world; the telemetry that follows is what actually closes the ticket. */}
-      {detail.simulation_id && detail.status !== "closed" && detail.status !== "verified" &&
+      {/* Demo-only, and confined to the simulator route. Operations is the
+          operator's workspace: injecting a repair into the simulated world is
+          not something that should be reachable from a real ticket queue. */}
+      {allowDemoRepair && detail.simulation_id && detail.status !== "closed" && detail.status !== "verified" &&
         <button className="demo-action" onClick={fixFault} disabled={working}>Repair this fault (demo)</button>}
     </div>
     {message && <p role="alert">{message}</p>}

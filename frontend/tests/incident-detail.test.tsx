@@ -16,14 +16,18 @@ const detail = {
 };
 
 describe("incident detail", () => {
-  it("offers the demo repair on any simulated ticket, on whichever route it is shown", () => {
-    const simulated = renderToStaticMarkup(<IncidentDetail detail={{ ...detail, simulation_id: "RUN-1" } as never} />);
-    const real = renderToStaticMarkup(<IncidentDetail detail={detail as never} />);
+  it("keeps the demo repair on the simulator route and out of the operator's queue", () => {
+    const simulated = { ...detail, simulation_id: "RUN-1" };
+    const onSimulator = renderToStaticMarkup(<IncidentDetail detail={simulated as never} allowDemoRepair />);
+    const inOperations = renderToStaticMarkup(<IncidentDetail detail={simulated as never} />);
+    const realIncident = renderToStaticMarkup(<IncidentDetail detail={detail as never} allowDemoRepair />);
 
-    expect(simulated).toContain("Repair this fault (demo)");
-    // A real incident has no simulation behind it, so the demo action must not
-    // appear at all — a crew cannot be dispatched by a button.
-    expect(real).not.toContain("Repair this fault (demo)");
+    expect(onSimulator).toContain("Repair this fault (demo)");
+    // Operations is the operator's workspace; a simulated repair does not belong
+    // in it even for a simulated ticket.
+    expect(inOperations).not.toContain("Repair this fault (demo)");
+    // And a real incident has no simulation behind it at all.
+    expect(realIncident).not.toContain("Repair this fault (demo)");
   });
 
   it("never offers a span for a feeder or transformer outage", () => {
