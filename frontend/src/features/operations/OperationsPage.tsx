@@ -8,6 +8,7 @@ import { StatusBar } from "../../components/StatusBar";
 import { emptyFilters, filterIncidents, IncidentFilters, type Filters } from "./IncidentFilters";
 import { IncidentQueue } from "./IncidentQueue";
 import { NetworkMap } from "./NetworkMap";
+import { useNetworkGeometry } from "./useNetworkGeometry";
 import { IncidentDetail } from "../incidents/IncidentDetail";
 
 export function OperationsPage() {
@@ -18,6 +19,8 @@ export function OperationsPage() {
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const selected = data?.incidents.items.find(({ id }) => id === selectedIncidentId);
   const incidents = useMemo(() => filterIncidents(data?.incidents.items ?? [], filters, new Set(data?.planned.items.flatMap(({ incident_id }) => incident_id ? [incident_id] : []) ?? [])), [data, filters]);
+  // The map shows what the queue shows: filter the list and the network follows.
+  const overview = useNetworkGeometry(incidents);
 
   useEffect(() => {
     setGeometry(undefined);
@@ -37,6 +40,6 @@ export function OperationsPage() {
   return <AppShell><StatusBar data={data} updatedAt={updatedAt} stale={Boolean(error)} />
     {backlog && <StatePanel title="Inbox backlog">{data.readiness.unprocessed_count} telemetry events await processing.</StatePanel>}
     {error && <StatePanel title="Live updates paused">Showing the last valid data while the API reconnects.</StatePanel>}
-    <div className="operations-layout"><aside className="queue-panel"><IncidentFilters incidents={data.incidents.items} filters={filters} onChange={setFilters} />{incidents.length ? <IncidentQueue incidents={incidents} selectedIncidentId={selectedIncidentId} onSelect={setSelectedIncidentId} /> : <StatePanel title="No matching incidents">Adjust filters or wait for the next poll.</StatePanel>}<IncidentDetail incidentId={selectedIncidentId} onChanged={refresh} /></aside><NetworkMap incident={selected} geometry={geometry} /></div>
+    <div className="operations-layout"><aside className="queue-panel"><IncidentFilters incidents={data.incidents.items} filters={filters} onChange={setFilters} />{incidents.length ? <IncidentQueue incidents={incidents} selectedIncidentId={selectedIncidentId} onSelect={setSelectedIncidentId} /> : <StatePanel title="No matching incidents">Adjust filters or wait for the next poll.</StatePanel>}<IncidentDetail incidentId={selectedIncidentId} onChanged={refresh} /></aside><NetworkMap incident={selected} geometry={geometry} overview={overview} /></div>
   </AppShell>;
 }

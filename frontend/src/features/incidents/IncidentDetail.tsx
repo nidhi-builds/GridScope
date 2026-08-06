@@ -61,6 +61,10 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
     return () => controller.abort();
   }, [incidentId, supplied]);
   if (!detail) return incidentId ? <aside className="incident-detail" aria-label="Incident detail">{message || "Loading incident detail..."}</aside> : null;
+  // A malformed payload must degrade to a message, not tear down the workspace.
+  // Losing the queue and the map because one detail response was wrong is the
+  // worst possible failure in a control room.
+  if (!detail.boundary?.geometry || !detail.confidence) return <aside className="incident-detail" aria-label="Incident detail">Incident detail unavailable</aside>;
   const action = allowed(detail.status);
   const repair = async () => {
     if (!action) return;
@@ -77,7 +81,7 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
   };
   const path = detail.boundary.geometry.pole_path ?? [];
   const corridor = detail.boundary.kind === "corridor";
-  const reasons = detail.confidence.reasons.map(explainReason).filter(Boolean) as string[];
+  const reasons = (detail.confidence.reasons ?? []).map(explainReason).filter(Boolean) as string[];
   const uninstrumented = Math.max(0, path.length - 2);
   return <aside className="incident-detail" aria-label="Incident detail">
     <h2>{FAULT[detail.fault_class] ?? detail.fault_class}</h2>
@@ -114,8 +118,8 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
       {detail.schedule_overlap.promotion_outcome ? `, ${detail.schedule_overlap.promotion_outcome}` : ""}).</p>}
 
     <h3>Evidence</h3>
-    <p>{Object.entries(detail.evidence.class_counts).map(([kind, count]) => `${count} ${EVIDENCE[kind] ?? kind.replaceAll("_", " ")}`).join(" · ") || "No evidence recorded"}</p>
-    {detail.location_history.length > 1 && <>
+    <p>{Object.entries(detail.evidence?.class_counts ?? {}).map(([kind, count]) => `${count} ${EVIDENCE[kind] ?? kind.replaceAll("_", " ")}`).join(" · ") || "No evidence recorded"}</p>
+    {(detail.location_history ?? []).length > 1 && <>
       <h3>How the estimate changed</h3>
       <ul className="detail-list">{detail.location_history.map((boundary, index) => <li key={`${boundary.kind}-${index}`}>
         {index === 0 ? "First" : "Then"}: {boundary.kind === "span" ? "single span" : boundary.kind} between {shortId(boundary.upstream_pole_id)} and {shortId(boundary.downstream_pole_id)}
@@ -123,7 +127,7 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
     </>}
 
     <h3>Ticket history</h3>
-    <ul className="detail-list">{detail.ticket_events.map((event) => <li key={event.id}>
+    <ul className="detail-list">{(detail.ticket_events ?? []).map((event) => <li key={event.id}>
       {when(event.occurred_at)} — {TICKET[event.type] ?? event.type.replaceAll("_", " ")}
       {event.reason && !TICKET[event.type] ? `: ${event.reason}` : ""}
     </li>)}</ul>

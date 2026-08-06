@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("react-leaflet", () => ({ GeoJSON: () => null, MapContainer: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>, TileLayer: () => null }));
+vi.mock("react-leaflet", () => ({ GeoJSON: () => null, MapContainer: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>, TileLayer: () => null, useMap: () => undefined }));
 
 import { loadIncidentGeometry, loadOperations } from "../src/api/client";
 import { IncidentQueue, sortIncidents } from "../src/features/operations/IncidentQueue";
@@ -58,21 +58,34 @@ describe("operator workspace", () => {
     expect(fetchSpy).toHaveBeenCalledWith("/api/v1/network/incidents/new-large", expect.objectContaining({ headers: { Accept: "application/json" } }));
   });
 
-  it("coordinates a queue click with selected-only map geometry", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => ({
-      ok: true,
-      json: async () => String(url).includes("/ready") ? { database: "ready", seed: "ready", worker: "ready", last_processed_at: null, unprocessed_count: 0, oldest_backlog_age_seconds: null }
-        : String(url).includes("/incidents?") ? { items: incidents, page: 1, page_size: 100, total: incidents.length }
-          : String(url).includes("/planned-operations") ? { items: [], page: 1, page_size: 100, total: 0 }
-            : String(url).includes("/device-health") ? { items: [], page: 1, page_size: 1, total: 0 }
-              : { type: "FeatureCollection", features: [{ type: "Feature", properties: { incident_id: "new-large" }, geometry: { type: "Point", coordinates: [77, 12] } }] },
-    }) as Response);
+  const workspaceFetch = () => vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => ({
+    ok: true,
+    json: async () => String(url).includes("/ready") ? { database: "ready", seed: "ready", worker: "ready", last_processed_at: null, unprocessed_count: 0, oldest_backlog_age_seconds: null }
+      : String(url).includes("/incidents?") ? { items: incidents, page: 1, page_size: 100, total: incidents.length }
+        : String(url).includes("/planned-operations") ? { items: [], page: 1, page_size: 100, total: 0 }
+          : String(url).includes("/device-health") ? { items: [], page: 1, page_size: 1, total: 0 }
+            : { type: "FeatureCollection", features: [{ type: "Feature", properties: { incident_id: String(url).split("/").pop() }, geometry: { type: "Point", coordinates: [77, 12] } }] },
+  }) as Response);
+
+  it("draws the whole visible queue on the map before anything is selected", async () => {
+    const fetchSpy = workspaceFetch();
 
     render(<OperationsPage />);
-    expect(fetchSpy.mock.calls.map(([url]) => String(url))).not.toContain("/api/v1/network/incidents/new-large");
+
+    await waitFor(() => expect(screen.getByTestId("network-map").getAttribute("data-network-features")).toBe("3"));
+    const requested = fetchSpy.mock.calls.map(([url]) => String(url));
+    for (const { id } of incidents) expect(requested).toContain(`/api/v1/network/incidents/${id}`);
+  });
+
+  it("moves the selected incident out of the background layer when a ticket is clicked", async () => {
+    workspaceFetch();
+
+    render(<OperationsPage />);
+    await waitFor(() => expect(screen.getByTestId("network-map").getAttribute("data-network-features")).toBe("3"));
     fireEvent.click(await screen.findByRole("button", { name: "new-large" }));
+
     await waitFor(() => expect(screen.getByTestId("network-map").getAttribute("data-selected")).toBe("new-large"));
-    expect(fetchSpy.mock.calls.map(([url]) => String(url))).toContain("/api/v1/network/incidents/new-large");
+    await waitFor(() => expect(screen.getByTestId("network-map").getAttribute("data-network-features")).toBe("2"));
   });
 
   it("never renders geometry from a previously selected incident", () => {
