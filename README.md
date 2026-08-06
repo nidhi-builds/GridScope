@@ -10,6 +10,8 @@ battery dies.
 It is built for a 2 a.m. control room: the operator sees what failed, where to
 send a crew, how confident the system is, and why.
 
+Live URL:https://gridscope-zulr.onrender.com
+
 ## Run it
 
 Requires Docker only.
