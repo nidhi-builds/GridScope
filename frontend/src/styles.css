@@ -47,7 +47,9 @@ button, select { font: inherit; }
 .system-health { margin: 1rem 1.25rem; padding: 0; list-style: none; display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
 .system-health li { padding: .75rem 1rem; background: white; border: 1px solid #dbe3ef; border-radius: .4rem; font-size: .88rem; }
 
-/* Map legend: readable at a glance, in an operator's vocabulary. */
+/* A disabled control must say why it is disabled. */
+.control-hint { flex-basis: 100%; margin: .1rem 0 0; font-size: .74rem; color: #8a5a00; }
+
 /* Where to send the crew: the panel's headline, not a paragraph among many. */
 .detail-where { margin: .6rem 0 .8rem; padding: .65rem .8rem; background: #fff4e5;
   border: 1px solid #e0b070; border-left: 5px solid #cc8a00; border-radius: .35rem; }
@@ -84,14 +86,6 @@ button, select { font: inherit; }
 .restoration-proof code { font-size: .78rem; background: #fff; padding: 0 .25rem; border-radius: .2rem; }
 .restoration-proof p { margin: .2rem 0 0; color: #14663a; font-weight: 700; }
 tr.event-restored td { background: #f2fbf5; }
-
-/* Live counts, so an all-grey grid reads as "nothing has reported" rather than
-   as a map that failed to load. */
-.network-summary { position: absolute; z-index: 500; left: .6rem; top: .6rem; display: flex; flex-wrap: wrap;
-  gap: .15rem .8rem; max-width: calc(100% - 15.5rem); padding: .4rem .65rem; background: rgb(255 255 255 / .95);
-  border: 1px solid #c3cdde; border-radius: .35rem; box-shadow: 0 2px 8px rgb(23 32 51 / .16); font-size: .72rem; }
-.network-summary span { display: inline-flex; align-items: center; gap: .3rem; white-space: nowrap; }
-.network-summary i { width: .6rem; height: .6rem; border-radius: 50%; border: 1px solid; }
 
 /* Compact corner card. Collapsed it is a single chip, so the map stays readable. */
 .map-legend { right: .6rem; bottom: .6rem; width: 13.5rem; display: block; padding: 0;

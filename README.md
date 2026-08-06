@@ -57,9 +57,6 @@ The map draws the network, not just the ticket you clicked.
   list and the map follows.
 - **Clicking a ticket zooms to it** — first to the incident's own location, then
   onto the exact span or search corridor once its geometry loads.
-- **A count strip** reports how many poles are dark, live, silent and
-  uninstrumented, so a network that has not reported yet cannot be mistaken for a
-  map that failed to load.
 
 Selection survives everything: switching tabs, reloading, or sharing the URL.
 
@@ -93,9 +90,8 @@ https://gridscope-zulr.onrender.com/operations?incident=<incident-id>
 **The map may be mostly grey on a freshly deployed instance, and that is
 correct.** A pole is only drawn green once it has *reported* power. Until
 telemetry arrives, poles are either grey (has a device, has not reported) or
-hollow (no device at all) — never green and never red. The count strip on the map
-states this in numbers. Start a scenario on `/simulator` to see the network come
-alive.
+hollow (no device at all) — never green and never red. Start a scenario on
+`/simulator` to see the network come alive.
 
 ## Documentation
 
