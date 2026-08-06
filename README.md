@@ -10,7 +10,7 @@ battery dies.
 It is built for a 2 a.m. control room: the operator sees what failed, where to
 send a crew, how confident the system is, and why.
 
-Live URL:https://gridscope-zulr.onrender.com
+**Live:** <https://gridscope-zulr.onrender.com>
 
 ## Run it
 
@@ -77,9 +77,8 @@ firmware-1.2 terminal silence, and duplicate/out-of-order/stale delivery.
 
 ## Live deployment
 
-<https://gridscope-zulr.onrender.com>
-
-The demo video link is in the submission email.
+<https://gridscope-zulr.onrender.com> — the demo video link is in the submission
+email.
 
 The deployment runs on a free tier that **cold-starts**. If the first request
 hangs, give it up to 60 seconds rather than assuming it is down. Readiness is
