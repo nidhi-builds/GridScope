@@ -62,7 +62,9 @@ export function loadRun(runId: string, signal?: AbortSignal): Promise<SimulatorR
 }
 
 export function loadRunEvents(runId: string, signal?: AbortSignal): Promise<Page<SimulatorEvent>> {
-  return request<Page<SimulatorEvent>>(`/simulator/runs/${encodeURIComponent(runId)}/events?page=1&page_size=200`, signal);
+  // Restoration events are appended last, so a short page hides exactly the
+  // events that prove the ticket closed on telemetry. 500 is the endpoint's max.
+  return request<Page<SimulatorEvent>>(`/simulator/runs/${encodeURIComponent(runId)}/events?page=1&page_size=500`, signal);
 }
 
 async function post<T>(path: string, body?: unknown): Promise<T> {

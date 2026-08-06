@@ -121,6 +121,21 @@ describe("simulator demo view", () => {
     expect(within(proof).getByText(/closes on these events, not on the crew's report/)).toBeTruthy();
   });
 
+  it("hides only the ticket panel, keeping the run and event stream on screen", async () => {
+    mockApi();
+    await start();
+    fireEvent.click(await screen.findByRole("link", { name: "INC-9 (run RUN-1)" }));
+    await screen.findByLabelText("Selected incident ticket");
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide this ticket" }));
+
+    await waitFor(() => expect(screen.queryByLabelText("Selected incident ticket")).toBeNull());
+    // The run must survive: hiding a ticket is not leaving the simulator.
+    expect(screen.getByLabelText("Run comparison")).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Generated events" })).toBeTruthy();
+    expect(screen.getByLabelText("Scenario controls")).toBeTruthy();
+  });
+
   it("streams generated events with their delivery outcome and keeps ground truth demo-only", async () => {
     mockApi();
     await start();

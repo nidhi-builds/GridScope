@@ -1,14 +1,16 @@
 import type { SimulatorOutcome, SimulatorRun } from "../../api/types";
 
-function describe({ incident_count, classes }: SimulatorOutcome): string {
+function describe(outcome?: SimulatorOutcome): string {
+  const { incident_count = 0, classes = [] } = outcome ?? {};
   const kinds = [...new Set(classes)].join("/");
   return `${incident_count} ${kinds ? `${kinds} ` : ""}incident${incident_count === 1 ? "" : "s"}`;
 }
 
 export function RunComparison({ run, onSelectIncident, selectedIncidentId }: { run: SimulatorRun; onSelectIncident?: (incidentId: string) => void; selectedIncidentId?: string }) {
-  const unobservable = run.expected.observability === "unobservable" || run.actual.outcome === "unobservable";
-  const truthPoles = run.truth.deenergized?.length ?? 0;
-  const truthEvents = run.truth.event_ids?.length ?? 0;
+  const unobservable = run.expected?.observability === "unobservable" || run.actual?.outcome === "unobservable";
+  const truthPoles = run.truth?.deenergized?.length ?? 0;
+  const truthEvents = run.truth?.event_ids?.length ?? 0;
+  const incidentIds = run.incident_ids ?? [];
   return <section className="run-comparison" aria-label="Run comparison">
     <h2>Run {run.id}</h2>
     <p>Scenario {run.scenario} / {run.status}</p>
@@ -16,17 +18,17 @@ export function RunComparison({ run, onSelectIncident, selectedIncidentId }: { r
     <p>Actual: {describe(run.actual)}</p>
     {unobservable
       ? <p>Unobservable by design</p>
-      : <p>{run.actual.outcome === "matched" ? "Matched" : "Mismatch against the expected outcome"}</p>}
-    {run.actual.detection_elapsed_seconds !== undefined
-      && <p>Detected in {Math.round(run.actual.detection_elapsed_seconds)}s / {run.actual.accepted_events ?? 0} accepted events</p>}
-    {run.actual.repair_outcome === "verified" && <p>Restoration verified</p>}
-    {run.actual.restoration_elapsed_seconds !== undefined
-      && <p>Restored in {Math.round(run.actual.restoration_elapsed_seconds)}s</p>}
+      : <p>{run.actual?.outcome === "matched" ? "Matched" : "Mismatch against the expected outcome"}</p>}
+    {run.actual?.detection_elapsed_seconds !== undefined
+      && <p>Detected in {Math.round(run.actual?.detection_elapsed_seconds)}s / {run.actual?.accepted_events ?? 0} accepted events</p>}
+    {run.actual?.repair_outcome === "verified" && <p>Restoration verified</p>}
+    {run.actual?.restoration_elapsed_seconds !== undefined
+      && <p>Restored in {Math.round(run.actual?.restoration_elapsed_seconds)}s</p>}
     <h3>Hidden ground truth (demo only)</h3>
     <p>{truthPoles} poles de-energized, {truthEvents} generated events.</p>
     <h3>Generated incidents</h3>
-    {run.incident_ids.length
-      ? <ul>{run.incident_ids.map((incidentId) => <li key={incidentId}>
+    {incidentIds.length
+      ? <ul>{incidentIds.map((incidentId) => <li key={incidentId}>
         {/* Opens the ticket here rather than throwing the operator back to
             Operations mid-demo. The link still works for a new tab. */}
         <a href={`/operations?incident=${encodeURIComponent(incidentId)}`}

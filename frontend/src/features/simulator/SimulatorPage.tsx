@@ -72,12 +72,12 @@ export function SimulatorPage() {
     setMessage("Seed state restored; simulator runs were cleared.");
   }, "The simulator could not be reset.");
 
-  const duplicates = Number(run?.actual.effect_evidence?.duplicate?.duplicate_attempts ?? 0);
+  const duplicates = Number(run?.actual?.effect_evidence?.duplicate?.duplicate_attempts ?? 0);
   return <AppShell>
     <header className="demo-banner"><h1>Simulator</h1><p>Demo view — simulated faults and repairs are not operator workflow.</p></header>
     <ScenarioControls
       scenarios={scenarios} scenarioKey={scenarioKey} seed={seed} busy={busy}
-      canRepair={Boolean(run) && !run?.actual.repair_outcome}
+      canRepair={Boolean(run) && !run?.actual?.repair_outcome}
       onScenarioChange={setScenarioKey} onSeedChange={setSeed}
       onStart={onStart} onRepair={onRepair} onReset={onReset}
     />
