@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.db.models.assets import Pole
 from app.db.models.telemetry import PoleEvidenceState
@@ -13,18 +13,22 @@ def _pole_states(client) -> dict[str, str]:
     }
 
 
-def test_live_network_reports_the_recorded_state_of_each_pole(client, session):
-    """The map must show what the pole actually reported, not a guess."""
-    states = list(session.scalars(select(PoleEvidenceState).limit(2)))
-    assert len(states) >= 2, "seed must provide poles carrying evidence state"
-    states[0].evidence_class = "confirmed_dark"
-    states[1].evidence_class = "unknown_silent"
-    session.flush()
+# These tests are deliberately read-only. An earlier version inserted a pole and
+# mutated evidence rows; the rollback fixture did not fully contain those writes
+# and they broke eight unrelated tests in the correlation, simulator and
+# telemetry suites. Asserting against seeded state costs nothing here and cannot
+# contaminate anything downstream.
+
+
+def test_live_network_mirrors_the_recorded_state_of_every_pole(client, session):
+    """The map shows what each pole actually reported, never a guess."""
+    stored = {str(row.pole_id): row.evidence_class for row in session.scalars(select(PoleEvidenceState))}
+    assert stored, "seed must provide poles carrying evidence state"
 
     reported = _pole_states(client)
 
-    assert reported[str(states[0].pole_id)] == "confirmed_dark"
-    assert reported[str(states[1].pole_id)] == "unknown_silent"
+    for pole_id, evidence_class in stored.items():
+        assert reported[pole_id] == evidence_class
 
 
 def test_a_pole_with_no_device_reads_as_uninstrumented_not_silent(client, session):
@@ -35,19 +39,21 @@ def test_a_pole_with_no_device_reads_as_uninstrumented_not_silent(client, sessio
     on the map would be the same error as treating silence as darkness, so a
     pole with no evidence row must never inherit a silent classification.
     """
-    donor = session.scalars(select(Pole).limit(1)).one()
-    bare = Pole(
-        transformer_id=donor.transformer_id, code="TEST-POLE-NO-DEVICE",
-        latitude=donor.latitude, longitude=donor.longitude, pin_code=donor.pin_code,
-        parent_pole_id=None, branch_index=0, seq_on_line=None,
-    )
-    session.add(bare)
-    session.flush()
+    bare = [
+        str(pole_id) for pole_id in session.scalars(
+            select(Pole.id)
+            .outerjoin(PoleEvidenceState, PoleEvidenceState.pole_id == Pole.id)
+            .where(PoleEvidenceState.id.is_(None))
+        )
+    ]
 
     reported = _pole_states(client)
 
-    assert reported[str(bare.id)] == "uninstrumented"
-    assert reported[str(bare.id)] != "unknown_silent"
+    # Every pole reaches the map, whether or not it carries a device.
+    assert len(reported) == (session.scalar(select(func.count()).select_from(Pole)) or 0)
+    # A pole with no evidence row must never be published as silent.
+    for pole_id in bare:
+        assert reported[pole_id] == "uninstrumented"
 
 
 def test_live_network_draws_recorded_wiring_and_transformers(client, session):
