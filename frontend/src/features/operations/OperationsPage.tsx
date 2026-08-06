@@ -1,26 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, loadIncidentGeometry, loadOperations } from "../../api/client";
+import { useEffect, useState } from "react";
+import { ApiError, loadIncidentGeometry } from "../../api/client";
 import type { FeatureCollection } from "../../api/types";
-import { useVisiblePolling } from "../../api/polling";
 import { AppShell } from "../../components/AppShell";
 import { StatePanel } from "../../components/StatePanel";
 import { StatusBar } from "../../components/StatusBar";
-import { emptyFilters, filterIncidents, IncidentFilters, type Filters } from "./IncidentFilters";
+import { IncidentFilters } from "./IncidentFilters";
 import { IncidentQueue } from "./IncidentQueue";
 import { NetworkMap } from "./NetworkMap";
-import { useNetworkGeometry } from "./useNetworkGeometry";
+import { useOperations } from "./OperationsProvider";
 import { IncidentDetail } from "../incidents/IncidentDetail";
 
 export function OperationsPage() {
-  const load = useCallback((signal: AbortSignal) => loadOperations(signal), []);
-  const { data, updatedAt, error, loading, refresh } = useVisiblePolling(load);
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string>();
+  const { data, updatedAt, error, loading, refresh, selectedIncidentId, selected, select, filters, setFilters, incidents, overview } = useOperations();
   const [geometry, setGeometry] = useState<FeatureCollection>();
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
-  const selected = data?.incidents.items.find(({ id }) => id === selectedIncidentId);
-  const incidents = useMemo(() => filterIncidents(data?.incidents.items ?? [], filters, new Set(data?.planned.items.flatMap(({ incident_id }) => incident_id ? [incident_id] : []) ?? [])), [data, filters]);
-  // The map shows what the queue shows: filter the list and the network follows.
-  const overview = useNetworkGeometry(incidents);
 
   useEffect(() => {
     setGeometry(undefined);
@@ -36,10 +28,10 @@ export function OperationsPage() {
 
   if (loading && !data) return <AppShell><StatePanel title="Loading operations">Connecting to GridScope…</StatePanel></AppShell>;
   if (!data) return <AppShell><StatePanel title={error instanceof ApiError && error.status === 503 ? "Starting GridScope" : "API unavailable"}>The last workspace data is unavailable. Retry when the service is ready.</StatePanel></AppShell>;
-  const backlog = data.readiness.unprocessed_count > 0;
+  const backlog = (data.readiness?.unprocessed_count ?? 0) > 0;
   return <AppShell><StatusBar data={data} updatedAt={updatedAt} stale={Boolean(error)} />
-    {backlog && <StatePanel title="Inbox backlog">{data.readiness.unprocessed_count} telemetry events await processing.</StatePanel>}
+    {backlog && <StatePanel title="Inbox backlog">{data.readiness?.unprocessed_count} telemetry events await processing.</StatePanel>}
     {error && <StatePanel title="Live updates paused">Showing the last valid data while the API reconnects.</StatePanel>}
-    <div className="operations-layout"><aside className="queue-panel"><IncidentFilters incidents={data.incidents.items} filters={filters} onChange={setFilters} />{incidents.length ? <IncidentQueue incidents={incidents} selectedIncidentId={selectedIncidentId} onSelect={setSelectedIncidentId} /> : <StatePanel title="No matching incidents">Adjust filters or wait for the next poll.</StatePanel>}<IncidentDetail incidentId={selectedIncidentId} onChanged={refresh} /></aside><NetworkMap incident={selected} geometry={geometry} overview={overview} /></div>
+    <div className="operations-layout"><aside className="queue-panel"><IncidentFilters incidents={data.incidents?.items ?? []} filters={filters} onChange={setFilters} />{incidents.length ? <IncidentQueue incidents={incidents} selectedIncidentId={selectedIncidentId} onSelect={select} /> : <StatePanel title="No matching incidents">Adjust filters or wait for the next poll.</StatePanel>}<IncidentDetail incidentId={selectedIncidentId} onChanged={refresh} /></aside><NetworkMap incident={selected} geometry={geometry} overview={overview} /></div>
   </AppShell>;
 }

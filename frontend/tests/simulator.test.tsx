@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SimulatorPage } from "../src/features/simulator/SimulatorPage";
+import { OperationsProvider } from "../src/features/operations/OperationsProvider";
 
 const scenarios = [
   { key: "known_span", label: "Exact known-topology span fault", expected_incident_count: 1, expected_classes: ["span"], boundary_kind: "span", observability: "observable" },
@@ -28,6 +29,18 @@ const events = {
   page: 1, page_size: 100, total: 3,
 };
 
+const incidentDetail = {
+  id: "INC-9", fault_class: "span", status: "detected", location_class: "span", affected_count: 4,
+  confidence: { level: "high", reasons: ["topology:registry"] },
+  navigation: { latitude: 12, longitude: 77 }, pin: { value: "1", source: "registry" },
+  feeder_id: "f-1", transformer_id: "dt-1", pole_id: null, updated_at: "2026-08-05T10:00:00Z",
+  affected_count_estimated: false,
+  boundary: { kind: "span", upstream_pole_id: "P-1", downstream_pole_id: "P-2", geometry: { pole_path: ["P-1", "P-2"] } },
+  location_history: [], topology: { source: "registry", calibration_bucket: null },
+  evidence: { class_counts: { confirmed_dark: 4 }, items: [], page: 1, page_size: 1, total: 0 },
+  schedule_overlap: null, ticket_events: [], ai_explanation: null,
+};
+
 function mockApi(started = run, afterRepair = repaired) {
   return vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
@@ -35,14 +48,15 @@ function mockApi(started = run, afterRepair = repaired) {
       : url.includes("/events") ? events
         : url.includes("/repair") ? afterRepair
           : url.includes("/simulator/reset") ? { status: "cleared" }
-            : url.endsWith("/simulator/runs") && init?.method === "POST" ? started
-              : started;
+            : url.includes("/api/v1/incidents/") ? incidentDetail
+              : url.endsWith("/simulator/runs") && init?.method === "POST" ? started
+                : started;
     return { ok: true, status: 200, json: async () => body } as Response;
   });
 }
 
 async function start(scenarioKey = "known_span") {
-  render(<SimulatorPage />);
+  render(<OperationsProvider><SimulatorPage /></OperationsProvider>);
   fireEvent.change(await screen.findByLabelText("Scenario"), { target: { value: scenarioKey } });
   fireEvent.click(screen.getByRole("button", { name: "Start scenario" }));
 }
@@ -60,6 +74,26 @@ describe("simulator demo view", () => {
     fireEvent.click(screen.getByRole("button", { name: "Repair fault" }));
     expect(await screen.findByText("Restoration verified")).toBeTruthy();
     expect(screen.getByText(/Restored in 61s/)).toBeTruthy();
+  });
+
+  it("opens the run's incident ticket in place so the fault can be repaired without leaving", async () => {
+    mockApi();
+    await start();
+
+    fireEvent.click(await screen.findByRole("link", { name: "INC-9 (run RUN-1)" }));
+
+    expect(await screen.findByLabelText("Selected incident ticket")).toBeTruthy();
+    // Selection lives in the URL, so it survives a reload and every other tab.
+    expect(new URLSearchParams(window.location.search).get("incident")).toBe("INC-9");
+  });
+
+  it("restores a ticket selected on another route from the URL alone", async () => {
+    mockApi();
+    window.history.replaceState({}, "", "/simulator?incident=INC-9");
+
+    render(<OperationsProvider><SimulatorPage /></OperationsProvider>);
+
+    expect(await screen.findByLabelText("Selected incident ticket")).toBeTruthy();
   });
 
   it("streams generated events with their delivery outcome and keeps ground truth demo-only", async () => {
@@ -103,4 +137,4 @@ describe("simulator demo view", () => {
   });
 });
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); window.history.replaceState({}, "", "/operations"); });

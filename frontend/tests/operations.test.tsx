@@ -11,6 +11,7 @@ import { emptyFilters, filterIncidents, IncidentFilters } from "../src/features/
 import { MapLegend } from "../src/features/operations/MapLegend";
 import { isGeometryForIncident } from "../src/features/operations/NetworkMap";
 import { OperationsPage } from "../src/features/operations/OperationsPage";
+import { OperationsProvider } from "../src/features/operations/OperationsProvider";
 import type { IncidentSummary } from "../src/api/types";
 
 const incidents: IncidentSummary[] = [
@@ -70,7 +71,7 @@ describe("operator workspace", () => {
   it("draws the whole visible queue on the map before anything is selected", async () => {
     const fetchSpy = workspaceFetch();
 
-    render(<OperationsPage />);
+    render(<OperationsProvider><OperationsPage /></OperationsProvider>);
 
     await waitFor(() => expect(screen.getByTestId("network-map").getAttribute("data-network-features")).toBe("3"));
     const requested = fetchSpy.mock.calls.map(([url]) => String(url));
@@ -80,12 +81,24 @@ describe("operator workspace", () => {
   it("moves the selected incident out of the background layer when a ticket is clicked", async () => {
     workspaceFetch();
 
-    render(<OperationsPage />);
+    render(<OperationsProvider><OperationsPage /></OperationsProvider>);
     await waitFor(() => expect(screen.getByTestId("network-map").getAttribute("data-network-features")).toBe("3"));
     fireEvent.click(await screen.findByRole("button", { name: "new-large" }));
 
     await waitFor(() => expect(screen.getByTestId("network-map").getAttribute("data-selected")).toBe("new-large"));
     await waitFor(() => expect(screen.getByTestId("network-map").getAttribute("data-network-features")).toBe("2"));
+  });
+
+  it("keeps the selected ticket in the URL so it survives a route change", async () => {
+    workspaceFetch();
+
+    render(<OperationsProvider><OperationsPage /></OperationsProvider>);
+    fireEvent.click(await screen.findByRole("button", { name: "new-large" }));
+
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("incident")).toBe("new-large"));
+    // Primary navigation carries the selection, rather than dropping it at the
+    // first tab switch.
+    expect(screen.getByLabelText("Simulator (demo)").getAttribute("href")).toBe("/simulator?incident=new-large");
   });
 
   it("never renders geometry from a previously selected incident", () => {
@@ -110,11 +123,11 @@ describe("operator workspace", () => {
   it("reaches the API-unavailable state instead of loading forever on a cold-start failure", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("Failed to fetch"));
 
-    render(<OperationsPage />);
+    render(<OperationsProvider><OperationsPage /></OperationsProvider>);
 
     expect(await screen.findByText("API unavailable")).toBeTruthy();
     expect(screen.queryByText("Loading operations")).toBeNull();
   });
 });
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); window.history.replaceState({}, "", "/operations"); });

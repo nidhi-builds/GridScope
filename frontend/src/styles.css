@@ -48,6 +48,12 @@ button, select { font: inherit; }
 .system-health li { padding: .75rem 1rem; background: white; border: 1px solid #dbe3ef; border-radius: .4rem; font-size: .88rem; }
 
 /* Map legend: readable at a glance, in an operator's vocabulary. */
+/* The ticket carried in from Operations, shown alongside the simulator run. */
+.simulator-ticket { margin: 1rem; padding: .5rem 1rem 1rem; background: #fff;
+  border: 1px solid #dbe3ef; border-left: 4px solid #164fa4; border-radius: .35rem; }
+.simulator-ticket .incident-detail { border: 0; padding: 0; margin: 0; }
+.simulator-ticket > button { margin-top: .5rem; }
+
 /* Compact corner card. Collapsed it is a single chip, so the map stays readable. */
 .map-legend { right: .6rem; bottom: .6rem; width: 13.5rem; display: block; padding: 0;
   background: #fff; border: 1px solid #c3cdde; border-radius: .4rem;
