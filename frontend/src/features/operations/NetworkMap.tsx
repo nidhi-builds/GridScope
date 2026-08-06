@@ -40,16 +40,24 @@ export function isGeometryForIncident(geometry: FeatureCollection | undefined, i
  * to the whole queue. Keyed on `focusKey` so a re-poll that changes nothing does
  * not yank the viewport out from under someone mid-pan.
  */
-function FitBounds({ collection, focusKey }: { collection?: FeatureCollection; focusKey: string }) {
+function FitBounds({ collection, focusKey, fallback }: { collection?: FeatureCollection; focusKey: string; fallback?: [number, number] }) {
   const map = useMap();
   useEffect(() => {
-    if (!collection?.features.length || typeof map?.flyToBounds !== "function") return;
-    const bounds = L.geoJSON(collection as never).getBounds();
-    if (bounds.isValid()) map.flyToBounds(bounds, { padding: [40, 40], maxZoom: 17, duration: 0.6 });
+    if (!map || typeof map.flyToBounds !== "function") return;
+    if (collection?.features.length) {
+      const bounds = L.geoJSON(collection as never).getBounds();
+      if (bounds.isValid()) {
+        map.flyToBounds(bounds, { padding: [40, 40], maxZoom: 17, duration: 0.6 });
+        return;
+      }
+    }
+    // Geometry may be slow, empty or missing. Selecting a ticket must still move
+    // the map, so fall back to the incident's own navigation point.
+    if (fallback && typeof map.flyTo === "function") map.flyTo(fallback, 17, { duration: 0.6 });
     // Deliberately not keyed on `collection`: geometry arriving incident by
     // incident must not re-zoom five times while the operator is reading.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, focusKey]);
+  }, [map, focusKey, Boolean(collection?.features.length)]);
   return null;
 }
 
@@ -71,7 +79,7 @@ export function NetworkMap({ incident, geometry, overview }: { incident?: Incide
       <TileLayer attribution="© OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       {context.features.length > 0 && <GeoJSON key={`context-${context.features.length}`} data={context} style={{ color: "#c32929", weight: 2, opacity: 0.5 }} pointToLayer={(feature, latlng) => pointToLayer(feature, latlng, false)} />}
       {selectedGeometry && <GeoJSON key={incident?.id} data={selectedGeometry} style={{ color: "#c32929", weight: 5 }} pointToLayer={(feature, latlng) => pointToLayer(feature, latlng, true)} />}
-      <FitBounds collection={focus} focusKey={focusKey} />
+      <FitBounds collection={focus} focusKey={focusKey} fallback={incident ? [incident.navigation.latitude, incident.navigation.longitude] : undefined} />
     </MapContainer><MapLegend />
   </section>;
 }

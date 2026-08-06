@@ -14,7 +14,9 @@ export function filterIncidents(incidents: IncidentSummary[], filters: Filters, 
   );
 }
 
-export function IncidentFilters({ incidents, filters, onChange }: { incidents: IncidentSummary[]; filters: Filters; onChange: (filters: Filters) => void }) {
+export const hasActiveFilters = (filters: Filters): boolean => Object.values(filters).some(Boolean);
+
+export function IncidentFilters({ incidents, filters, onChange, onReset, canReset }: { incidents: IncidentSummary[]; filters: Filters; onChange: (filters: Filters) => void; onReset?: () => void; canReset?: boolean }) {
   const options = (key: keyof Filters, values: Array<string | null>, label: string) => <label>{label}<select aria-label={label} value={filters[key]} onChange={(event) => onChange({ ...filters, [key]: event.target.value })}><option value="">All</option>{[...new Set(values.filter(Boolean) as string[])].map((value) => <option key={value} value={value}>{value}</option>)}</select></label>;
   return <div className="filters" aria-label="Incident filters">
     {options("status", incidents.map(({ status }) => status), "Status")}
@@ -23,5 +25,8 @@ export function IncidentFilters({ incidents, filters, onChange }: { incidents: I
     {options("feeder", incidents.map(({ feeder_id }) => feeder_id), "Feeder")}
     {options("transformer", incidents.map(({ transformer_id }) => transformer_id), "DT")}
     <label>Planned<select aria-label="Planned" value={filters.planned} onChange={(event) => onChange({ ...filters, planned: event.target.value })}><option value="">All</option><option value="linked">Associated</option></select></label>
+    {/* Clears the view, not the data: filters and the selected ticket go back to
+        default so the full queue is visible again. No incident is touched. */}
+    <button type="button" className="reset-queue" onClick={onReset} disabled={!canReset}>Reset queue view</button>
   </div>;
 }

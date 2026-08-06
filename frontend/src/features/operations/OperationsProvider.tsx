@@ -3,7 +3,7 @@ import { loadOperations } from "../../api/client";
 import type { FeatureCollection, IncidentSummary, OperationsData } from "../../api/types";
 import { useVisiblePolling, type PollState } from "../../api/polling";
 import { useLocation, setQuery } from "../../navigation";
-import { emptyFilters, filterIncidents, type Filters } from "./IncidentFilters";
+import { emptyFilters, filterIncidents, hasActiveFilters, type Filters } from "./IncidentFilters";
 import { useNetworkGeometry } from "./useNetworkGeometry";
 
 type OperationsContext = PollState<OperationsData> & {
@@ -12,6 +12,8 @@ type OperationsContext = PollState<OperationsData> & {
   select: (incidentId?: string) => void;
   filters: Filters;
   setFilters: (filters: Filters) => void;
+  resetQueue: () => void;
+  canResetQueue: boolean;
   incidents: IncidentSummary[];
   overview: FeatureCollection;
 };
@@ -48,9 +50,13 @@ export function OperationsProvider({ children }: PropsWithChildren) {
     [poll.data, filters],
   );
   const overview = useNetworkGeometry(incidents);
+  // Reset clears the *view* — filters and selection — and never the incidents
+  // themselves. Wiping real tickets from an operator console is not a button.
+  const resetQueue = useCallback(() => { setFilters(emptyFilters); select(undefined); }, [select]);
+  const canResetQueue = hasActiveFilters(filters) || Boolean(selectedIncidentId);
   const value = useMemo(
-    () => ({ ...poll, selectedIncidentId, selected, select, filters, setFilters, incidents, overview }),
-    [poll, selectedIncidentId, selected, select, filters, incidents, overview],
+    () => ({ ...poll, selectedIncidentId, selected, select, filters, setFilters, resetQueue, canResetQueue, incidents, overview }),
+    [poll, selectedIncidentId, selected, select, filters, resetQueue, canResetQueue, incidents, overview],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

@@ -101,6 +101,24 @@ describe("operator workspace", () => {
     expect(screen.getByLabelText("Simulator (demo)").getAttribute("href")).toBe("/simulator?incident=new-large");
   });
 
+  it("resets the queue view without touching any incident", async () => {
+    workspaceFetch();
+
+    render(<OperationsProvider><OperationsPage /></OperationsProvider>);
+    const reset = await screen.findByRole("button", { name: "Reset queue view" });
+    expect(reset.hasAttribute("disabled")).toBe(true);
+
+    fireEvent.change(await screen.findByLabelText("Status"), { target: { value: "detected" } });
+    fireEvent.click(await screen.findByRole("button", { name: "new-large" }));
+    await waitFor(() => expect(reset.hasAttribute("disabled")).toBe(false));
+    fireEvent.click(reset);
+
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("incident")).toBeNull());
+    expect((await screen.findByLabelText("Status") as HTMLSelectElement).value).toBe("");
+    // The full queue is back, so nothing was removed.
+    expect(await screen.findByRole("button", { name: "resolved" })).toBeTruthy();
+  });
+
   it("never renders geometry from a previously selected incident", () => {
     const geometry = {
       type: "FeatureCollection" as const,

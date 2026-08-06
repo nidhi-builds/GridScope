@@ -48,6 +48,11 @@ button, select { font: inherit; }
 .system-health li { padding: .75rem 1rem; background: white; border: 1px solid #dbe3ef; border-radius: .4rem; font-size: .88rem; }
 
 /* Map legend: readable at a glance, in an operator's vocabulary. */
+.filters .reset-queue { align-self: end; padding: .35rem .7rem; border: 1px solid #c3cdde;
+  background: #fff; border-radius: .3rem; font-size: .74rem; font-weight: 700; color: #24425f; cursor: pointer; }
+.filters .reset-queue:disabled { opacity: .45; cursor: default; }
+.filters .reset-queue:not(:disabled):hover { background: #eef3fb; }
+
 /* The ticket carried in from Operations, shown alongside the simulator run. */
 .simulator-ticket { margin: 1rem; padding: .5rem 1rem 1rem; background: #fff;
   border: 1px solid #dbe3ef; border-left: 4px solid #164fa4; border-radius: .35rem; }
