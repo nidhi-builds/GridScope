@@ -92,7 +92,7 @@ export function SimulatorPage() {
       <button className="panel-dismiss" onClick={() => select(undefined)}>Hide this ticket</button>
     </section>}
     {run
-      ? <><RunComparison run={run} onSelectIncident={select} selectedIncidentId={selectedIncidentId} /><EventStream events={events} duplicateAttempts={duplicates} /></>
+      ? <><RunComparison run={run} onSelectIncident={select} selectedIncidentId={selectedIncidentId} /><EventStream events={events} duplicateAttempts={duplicates} repaired={Boolean(run.actual?.repair_outcome)} /></>
       : <StatePanel title="No simulator run">Choose a scenario and seed, then start a deterministic run.</StatePanel>}
   </AppShell>;
 }

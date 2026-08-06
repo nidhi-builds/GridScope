@@ -96,29 +96,48 @@ describe("simulator demo view", () => {
     expect(await screen.findByLabelText("Selected incident ticket")).toBeTruthy();
   });
 
-  it("names the poles that reported power back, as the evidence that closes the ticket", async () => {
-    const restored = {
-      items: [
-        ...events.items,
-        { id: "E-4", device_id: "D-1", pole_id: "P-2", event_type: "power_restored", device_time: "2026-08-05T10:01:00Z", received_at: "2026-08-05T10:01:02Z", processing_state: "processed", epoch_decision: "in_order" },
-        { id: "E-5", device_id: "D-2", pole_id: "P-3", event_type: "power_restored", device_time: "2026-08-05T10:01:01Z", received_at: "2026-08-05T10:01:03Z", processing_state: "processed", epoch_decision: "in_order" },
-      ],
-      page: 1, page_size: 100, total: 5,
-    };
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => ({
-      ok: true, status: 200,
-      json: async () => String(url).includes("/simulator/scenarios") ? scenarios
-        : String(url).includes("/events") ? restored
-          : String(url).includes("/api/v1/incidents/") ? incidentDetail : run,
-    }) as Response);
+  const withRestoration = {
+    items: [
+      ...events.items,
+      { id: "E-4", device_id: "D-1", pole_id: "P-2", event_type: "power_restored", device_time: "2026-08-05T10:01:00Z", received_at: "2026-08-05T10:01:02Z", processing_state: "processed", epoch_decision: "in_order" },
+      { id: "E-5", device_id: "D-2", pole_id: "P-3", event_type: "power_restored", device_time: "2026-08-05T10:01:01Z", received_at: "2026-08-05T10:01:03Z", processing_state: "processed", epoch_decision: "in_order" },
+    ],
+    page: 1, page_size: 500, total: 5,
+  };
+
+  const restorationApi = () => vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => ({
+    ok: true, status: 200,
+    json: async () => String(url).includes("/simulator/scenarios") ? scenarios
+      : String(url).includes("/events") ? withRestoration
+        : String(url).includes("/repair") ? repaired
+          : String(url).includes("/api/v1/incidents/") ? incidentDetail
+            : String(url).endsWith("/simulator/runs") && init?.method === "POST" ? run : run,
+  }) as Response);
+
+  it("shows no restoration panel until the fault is actually repaired", async () => {
+    // Scenarios emit heartbeat and boot events before any repair. Treating those
+    // as restoration told the operator power was back while the fault was live.
+    restorationApi();
 
     await start();
+
+    await screen.findByLabelText("Run comparison");
+    expect(screen.queryByLabelText("Restoration telemetry")).toBeNull();
+    expect(document.querySelectorAll("tr.event-restored")).toHaveLength(0);
+  });
+
+  it("names the poles that reported power back, as the evidence that closes the ticket", async () => {
+    restorationApi();
+    await start();
+    await screen.findByLabelText("Run comparison");
+
+    fireEvent.click(screen.getByRole("button", { name: "Repair fault" }));
 
     const proof = await screen.findByLabelText("Restoration telemetry");
     expect(within(proof).getByText("2 poles reported power back after the repair")).toBeTruthy();
     expect(within(proof).getByText("P-2")).toBeTruthy();
     expect(within(proof).getByText("P-3")).toBeTruthy();
-    expect(within(proof).getByText(/closes on these events, not on the crew's report/)).toBeTruthy();
+    expect(document.querySelectorAll("tr.event-restored")).toHaveLength(2);
   });
 
   it("hides only the ticket panel, keeping the run and event stream on screen", async () => {

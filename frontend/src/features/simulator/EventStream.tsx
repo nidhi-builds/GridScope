@@ -5,10 +5,15 @@ const OUTCOMES: Record<string, string> = {
   pending: "queued", retry: "retrying",
 };
 
-/** Events that say a pole has power again, as opposed to losing it. */
-const RESTORATION = new Set(["power_restored", "boot", "heartbeat"]);
-
-export function restoredPoles(events: SimulatorEvent[]): { poleId: string; at: string; accepted: boolean }[] {
+/**
+ * Only `power_restored` counts. `heartbeat` and `boot` also carry
+ * `energized: true`, but scenarios emit them before any repair — an upstream
+ * live anchor, reboot replay, heartbeat noise — so treating them as restoration
+ * painted the stream green while the fault was still live. Green here means one
+ * thing: this pole has power back after being dark.
+ */
+export function restoredPoles(events: SimulatorEvent[], repaired: boolean): { poleId: string; at: string; accepted: boolean }[] {
+  if (!repaired) return [];
   const seen = new Map<string, { poleId: string; at: string; accepted: boolean }>();
   for (const event of events) {
     if (event.event_type !== "power_restored" || !event.pole_id) continue;
@@ -19,8 +24,9 @@ export function restoredPoles(events: SimulatorEvent[]): { poleId: string; at: s
   return [...seen.values()];
 }
 
-export function EventStream({ events, duplicateAttempts }: { events: SimulatorEvent[]; duplicateAttempts: number }) {
-  const restored = restoredPoles(events);
+export function EventStream({ events, duplicateAttempts, repaired = false }: { events: SimulatorEvent[]; duplicateAttempts: number; repaired?: boolean }) {
+  const restored = restoredPoles(events, repaired);
+  const restoredIds = new Set(restored.length ? events.filter((event) => event.event_type === "power_restored").map((event) => event.id) : []);
   return <section className="event-stream" aria-label="Generated event stream">
     <h3>Generated events</h3>
     {duplicateAttempts > 0 && <p>{duplicateAttempts} duplicate deliver{duplicateAttempts === 1 ? "y" : "ies"} rejected at ingest</p>}
@@ -39,7 +45,7 @@ export function EventStream({ events, duplicateAttempts }: { events: SimulatorEv
     {events.length
       ? <table aria-label="Generated events">
         <thead><tr><th>Device time</th><th>Received</th><th>Pole</th><th>Type</th><th>Result</th></tr></thead>
-        <tbody>{events.map((event) => <tr key={event.id} className={RESTORATION.has(event.event_type) ? "event-restored" : undefined}>
+        <tbody>{events.map((event) => <tr key={event.id} className={restoredIds.has(event.id) ? "event-restored" : undefined}>
           <td>{event.device_time}</td>
           <td>{event.received_at}</td>
           <td>{event.pole_id ?? "unknown"}</td>
