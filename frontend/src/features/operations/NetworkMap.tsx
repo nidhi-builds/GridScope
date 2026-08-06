@@ -54,10 +54,11 @@ function FitBounds({ collection, focusKey, fallback }: { collection?: FeatureCol
     // Geometry may be slow, empty or missing. Selecting a ticket must still move
     // the map, so fall back to the incident's own navigation point.
     if (fallback && typeof map.flyTo === "function") map.flyTo(fallback, 17, { duration: 0.6 });
-    // Deliberately not keyed on `collection`: geometry arriving incident by
-    // incident must not re-zoom five times while the operator is reading.
+    // `focusKey` already encodes both the selection and whether its geometry has
+    // arrived, so this re-runs exactly twice per click: once to the incident's
+    // own point, once to its real span when the geometry lands.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, focusKey, Boolean(collection?.features.length)]);
+  }, [map, focusKey]);
   return null;
 }
 
@@ -72,8 +73,12 @@ export function NetworkMap({ incident, geometry, overview }: { incident?: Incide
       (feature.properties as { incident_id?: string } | null)?.incident_id !== incident?.id
     )),
   }), [overview, incident?.id]);
-  const focus = selectedGeometry ?? (context.features.length ? context : undefined);
-  const focusKey = incident?.id ?? `overview:${context.features.length}`;
+  // With an incident selected the focus is that incident *only*. Falling back to
+  // the whole-queue layer here was the zoom bug: clicking a ticket fitted the
+  // map to every incident at once, and because the effect key did not change
+  // when the selected geometry finally arrived, it never zoomed in afterwards.
+  const focus = incident ? selectedGeometry : (context.features.length ? context : undefined);
+  const focusKey = `${incident?.id ?? "overview"}:${focus?.features.length ?? 0}`;
   return <section className="network-map" data-testid="network-map" data-selected={incident?.id ?? ""} data-network-features={context.features.length} aria-label="Network map">
     <MapContainer center={center} zoom={13} scrollWheelZoom className="leaflet-map">
       <TileLayer attribution="© OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

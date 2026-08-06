@@ -48,6 +48,22 @@ button, select { font: inherit; }
 .system-health li { padding: .75rem 1rem; background: white; border: 1px solid #dbe3ef; border-radius: .4rem; font-size: .88rem; }
 
 /* Map legend: readable at a glance, in an operator's vocabulary. */
+/* Where to send the crew: the panel's headline, not a paragraph among many. */
+.detail-where { margin: .6rem 0 .8rem; padding: .65rem .8rem; background: #fff4e5;
+  border: 1px solid #e0b070; border-left: 5px solid #cc8a00; border-radius: .35rem; }
+.detail-where-label { display: block; font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: #8a5a00; margin-bottom: .2rem; }
+.detail-where p { margin: 0; font-size: .92rem; line-height: 1.4; }
+.detail-where b { font-size: 1rem; }
+.detail-more { margin: .35rem 0; border-top: 1px solid #e5eaf2; padding-top: .35rem; }
+.detail-more > summary { cursor: pointer; font-size: .74rem; font-weight: 700; color: #5b687b;
+  text-transform: uppercase; letter-spacing: .03em; padding: .2rem 0; }
+.detail-reference { font-size: .7rem; color: #8792a4; word-break: break-all; }
+.ticket-action { margin: .2rem 0 .4rem; padding: .45rem .9rem; border: 0; border-radius: .3rem;
+  background: #164fa4; color: #fff; font-weight: 700; cursor: pointer; }
+.panel-dismiss { margin-top: .5rem; padding: .35rem .7rem; border: 1px solid #c3cdde;
+  background: #fff; border-radius: .3rem; font-size: .74rem; color: #5b687b; cursor: pointer; }
+
 .filters .reset-queue { align-self: end; padding: .35rem .7rem; border: 1px solid #c3cdde;
   background: #fff; border-radius: .3rem; font-size: .74rem; font-weight: 700; color: #24425f; cursor: pointer; }
 .filters .reset-queue:disabled { opacity: .45; cursor: default; }

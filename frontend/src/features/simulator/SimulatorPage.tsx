@@ -86,7 +86,10 @@ export function SimulatorPage() {
         repaired here and acknowledged there without losing your place. */}
     {selectedIncidentId && <section className="simulator-ticket" aria-label="Selected incident ticket">
       <IncidentDetail incidentId={selectedIncidentId} onChanged={refresh} version={selected?.updated_at} />
-      <button onClick={() => select(undefined)}>Clear selected ticket</button>
+      {/* "Clear ticket" read like a ticket action — dangerously so on a resolved
+          ticket, where closing is telemetry's job and never an operator's. This
+          only hides the panel. */}
+      <button className="panel-dismiss" onClick={() => select(undefined)}>Hide this ticket</button>
     </section>}
     {run
       ? <><RunComparison run={run} onSelectIncident={select} selectedIncidentId={selectedIncidentId} /><EventStream events={events} duplicateAttempts={duplicates} /></>

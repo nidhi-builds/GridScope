@@ -94,54 +94,62 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
       <span className="badge status">{STATUS[detail.status] ?? detail.status}</span>
     </div>
 
-    <div className="detail-facts">
-      <div><span className="label">Send crew to</span><span>{detail.navigation.latitude}, {detail.navigation.longitude}</span></div>
-      <div><span className="label">Area PIN</span><span>{detail.pin.value ?? "not on record"}{detail.pin.value ? ` (${detail.pin.source === "registry" ? "from records" : detail.pin.source ?? "unknown source"})` : ""}</span></div>
-      <div><span className="label">Poles affected</span><span>{detail.affected_count}{detail.affected_count_estimated ? " (estimated — wiring not fully recorded)" : ""}</span></div>
-      <div><span className="label">Last updated</span><span>{when(detail.updated_at)}</span></div>
-      <div><span className="label">Reference</span><span>{detail.id}</span></div>
+    {/* The one thing a crew is dispatched on. Everything else is supporting
+        detail, so this gets the top of the panel and the visual weight. */}
+    <div className="detail-where">
+      <span className="detail-where-label">{corridor ? "Where to search" : "Where the fault is"}</span>
+      {corridor
+        ? <p><b>Between pole {shortId(detail.boundary.upstream_pole_id)} and pole {shortId(detail.boundary.downstream_pole_id)}</b>
+          {uninstrumented > 0 ? `, with ${uninstrumented} pole${uninstrumented === 1 ? "" : "s"} in between that have no sensor` : ""}.
+          The wiring here was never recorded, so the system cannot narrow it further.</p>
+        : <p><b>On the span between pole {shortId(detail.boundary.upstream_pole_id)} and pole {shortId(detail.boundary.downstream_pole_id)}</b>.</p>}
     </div>
 
+    <div className="detail-facts">
+      <div><span className="label">Send crew to</span><span>{detail.navigation.latitude}, {detail.navigation.longitude}</span></div>
+      <div><span className="label">Poles affected</span><span>{detail.affected_count}{detail.affected_count_estimated ? " (estimated — wiring not fully recorded)" : ""}</span></div>
+      <div><span className="label">Area PIN</span><span>{detail.pin.value ?? "not on record"}</span></div>
+    </div>
+
+    {action && <button className="ticket-action" onClick={repair}>{action.label}</button>}{message && <p role="alert">{message}</p>}
     {/* Stated up front, not only once the ticket reaches "resolved". */}
-    <p className="detail-note">This ticket can only be closed by telemetry. Once the crew reports a repair, the
-      affected poles must report power and hold it for 30 seconds before it closes on its own.</p>
+    {!action && detail.status === "detected" ? null : <p className="detail-note">
+      {detail.status === "resolved" ? "Repair reported. Waiting for the affected poles to report power and hold it for 30 seconds. No manual close."
+        : detail.status === "verified" ? "Restoration confirmed by telemetry. Closing."
+          : detail.status === "closed" ? "Closed on restoration telemetry, not on an operator claim."
+            : "Closes on telemetry only: after a reported repair the poles must report power and hold it for 30 seconds."}
+    </p>}
 
-    <h3>{corridor ? "Where to search" : "Where the fault is"}</h3>
-    {corridor
-      ? <p>Somewhere between pole {shortId(detail.boundary.upstream_pole_id)} and pole {shortId(detail.boundary.downstream_pole_id)}
-        {uninstrumented > 0 ? `, with ${uninstrumented} pole${uninstrumented === 1 ? "" : "s"} in between that have no sensor` : ""}.
-        The wiring here was never recorded, so the system cannot narrow it further.</p>
-      : <p>On the span between pole {shortId(detail.boundary.upstream_pole_id)} and pole {shortId(detail.boundary.downstream_pole_id)}.</p>}
-    {path.length > 1 && <p>Line to walk: {path.map(shortId).join(" → ")}</p>}
+    {/* Everything below is evidence for the review call, not for the dispatch
+        decision, so it is collapsed by default. */}
+    <details className="detail-more"><summary>Why the system thinks this</summary>
+      {reasons.length > 0 && <ul className="reason-list">{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>}
+      <p>Wiring source: {detail.topology.source === "registry" ? "on record" : "estimated from pole positions"}
+        {detail.topology.calibration_bucket ? ` (match quality: ${detail.topology.calibration_bucket})` : ""}.</p>
+      {detail.schedule_overlap && <p>Overlaps planned work ({detail.schedule_overlap.status}
+        {detail.schedule_overlap.promotion_outcome ? `, ${detail.schedule_overlap.promotion_outcome}` : ""}).</p>}
+      {path.length > 1 && <p>Line to walk: {path.map(shortId).join(" → ")}</p>}
+    </details>
 
-    <h3>Why the system thinks this</h3>
-    {reasons.length > 0 && <ul className="reason-list">{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>}
-    <p>Wiring source: {detail.topology.source === "registry" ? "on record" : "estimated from pole positions"}
-      {detail.topology.calibration_bucket ? ` (match quality: ${detail.topology.calibration_bucket})` : ""}.</p>
-    {detail.schedule_overlap && <p>Overlaps planned work ({detail.schedule_overlap.status}
-      {detail.schedule_overlap.promotion_outcome ? `, ${detail.schedule_overlap.promotion_outcome}` : ""}).</p>}
+    <details className="detail-more"><summary>Evidence</summary>
+      <p>{Object.entries(detail.evidence?.class_counts ?? {}).map(([kind, count]) => `${count} ${EVIDENCE[kind] ?? kind.replaceAll("_", " ")}`).join(" · ") || "No evidence recorded"}</p>
+      {(detail.location_history ?? []).length > 1 && <>
+        <p className="label">How the estimate changed</p>
+        <ul className="detail-list">{detail.location_history.map((boundary, index) => <li key={`${boundary.kind}-${index}`}>
+          {index === 0 ? "First" : "Then"}: {boundary.kind === "span" ? "single span" : boundary.kind} between {shortId(boundary.upstream_pole_id)} and {shortId(boundary.downstream_pole_id)}
+        </li>)}</ul>
+      </>}
+    </details>
 
-    <h3>Evidence</h3>
-    <p>{Object.entries(detail.evidence?.class_counts ?? {}).map(([kind, count]) => `${count} ${EVIDENCE[kind] ?? kind.replaceAll("_", " ")}`).join(" · ") || "No evidence recorded"}</p>
-    {(detail.location_history ?? []).length > 1 && <>
-      <h3>How the estimate changed</h3>
-      <ul className="detail-list">{detail.location_history.map((boundary, index) => <li key={`${boundary.kind}-${index}`}>
-        {index === 0 ? "First" : "Then"}: {boundary.kind === "span" ? "single span" : boundary.kind} between {shortId(boundary.upstream_pole_id)} and {shortId(boundary.downstream_pole_id)}
+    <details className="detail-more"><summary>Ticket history</summary>
+      <ul className="detail-list">{(detail.ticket_events ?? []).map((event) => <li key={event.id}>
+        {when(event.occurred_at)} — {TICKET[event.type] ?? event.type.replaceAll("_", " ")}
+        {event.reason && !TICKET[event.type] ? `: ${event.reason}` : ""}
       </li>)}</ul>
-    </>}
+      <p className="detail-reference">Reference <b>{detail.id}</b> · updated {when(detail.updated_at)}</p>
+    </details>
 
-    <h3>Ticket history</h3>
-    <ul className="detail-list">{(detail.ticket_events ?? []).map((event) => <li key={event.id}>
-      {when(event.occurred_at)} — {TICKET[event.type] ?? event.type.replaceAll("_", " ")}
-      {event.reason && !TICKET[event.type] ? `: ${event.reason}` : ""}
-    </li>)}</ul>
-
-    {action && <button onClick={repair}>{action.label}</button>}{message && <p role="alert">{message}</p>}
-    {detail.status === "resolved" && <p className="detail-note">Repair reported. Waiting for the affected poles to report power and hold it for 30 seconds. No manual close.</p>}
-    {detail.status === "verified" && <p className="detail-note">Restoration confirmed by telemetry. Closing.</p>}
-    {detail.status === "closed" && <p className="detail-note">Closed on restoration telemetry, not on an operator claim.</p>}
-
-    <h3>Explanation</h3>
+    <details className="detail-more"><summary>Explanation</summary>
     {detail.ai_explanation ? <>
       <p>{detail.ai_explanation.status === "fallback" ? "Deterministic fallback" : "Generated explanation"}</p>
       <button aria-pressed={language === "english"} onClick={() => setLanguage("english")}>English</button>
@@ -149,5 +157,6 @@ export function IncidentDetail({ incidentId, detail: supplied, onAction, onChang
       <p>{detail.ai_explanation.text[language]}</p>
       <p>AI explanation cannot change incident facts or ticket status.</p>
     </> : <><p>Explanation unavailable</p><p>AI explanation cannot change incident facts or ticket status.</p></>}
+    </details>
   </aside>;
 }
