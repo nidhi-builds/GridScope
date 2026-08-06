@@ -17,6 +17,7 @@ from app.api.simulator import router as simulator_router
 from app.api.telemetry import router as telemetry_router
 from app.db import engine
 from app.schedules.feed import DatabaseScheduleFeed, ScheduleCache, poll_schedule_feed
+from app.simulator.heartbeat import run_heartbeats
 from app.telemetry.worker import run_worker
 
 
@@ -46,13 +47,17 @@ async def lifespan(app: FastAPI):
     worker = asyncio.create_task(run_worker(stop_worker, app.state.schedule_cache))
     app.state.worker = worker
     schedules = asyncio.create_task(poll_schedule_feed(DatabaseScheduleFeed(), app.state.schedule_cache, stop_schedules))
+    stop_heartbeats = asyncio.Event()
+    heartbeats = asyncio.create_task(run_heartbeats(stop_heartbeats))
     try:
         yield
     finally:
         stop_worker.set()
         stop_schedules.set()
+        stop_heartbeats.set()
         await worker
         await schedules
+        await heartbeats
         engine.dispose()
 
 

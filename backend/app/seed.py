@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import engine
 from app.db.models.assets import Device, DeviceAssignment, Feeder, Pole, Substation, TopologyEdge, Transformer
+from app.db.models.telemetry import PoleEvidenceState
+from app.detection.evidence import HEARTBEAT_TIMEOUT
 from app.domain.types import SeedSummary
 from app.simulator.generator import generate_network
 from app.topology.importer import validate_registry_tree
@@ -214,8 +216,47 @@ def seed_if_empty(session: Session, seed: int) -> SeedSummary:
             for device in network.devices
         ],
     )
+    _seed_baseline_live(session, network, seed)
     session.flush()
     return _counts(session)
+
+
+def _seed_baseline_live(session: Session, network, seed: int) -> None:
+    """Record that every online device last reported energised.
+
+    Without this the console opens on a grey map: no pole is green until it has
+    actually reported, and nothing has reported on a fresh database. Grey is the
+    honest answer, but it is indistinguishable from a broken map.
+
+    This states the network's known starting condition — the grid was up before
+    the demo began — rather than inventing a reading for a pole that has none.
+    Offline devices and poles with no device are deliberately left alone: they
+    stay `unknown_silent` and `uninstrumented` respectively, because the system
+    genuinely does not know their state, and pretending otherwise would be the
+    same error as treating silence as darkness.
+    """
+    if not get_settings().seed_baseline_live:
+        return
+    # Must be `now`, not the fixed seed date. The worker expires any live state
+    # whose `fresh_until` has passed, so a baseline dated in the past would be
+    # swept to `unknown_silent` on the worker's first pass three seconds later —
+    # the map would flash green and immediately go grey again.
+    observed_at = datetime.now(UTC)
+    session.execute(
+        insert(PoleEvidenceState),
+        [
+            {
+                "id": _id(seed, "baseline-live", str(device.pole_id)),
+                "pole_id": device.pole_id,
+                "evidence_class": "confirmed_live",
+                "source_event_id": None,
+                "fresh_until": observed_at + HEARTBEAT_TIMEOUT,
+                "device_health": "healthy",
+                "evidence": {"origin": "seed_baseline", "observed_at": observed_at.isoformat()},
+            }
+            for device in network.devices if device.is_online
+        ],
+    )
 
 
 def migrate_and_seed() -> SeedSummary | None:

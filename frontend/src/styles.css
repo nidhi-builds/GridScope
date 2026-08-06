@@ -75,6 +75,16 @@ button, select { font: inherit; }
 .simulator-ticket .incident-detail { border: 0; padding: 0; margin: 0; }
 .simulator-ticket > button { margin-top: .5rem; }
 
+/* Restoration telemetry, called out because it is the evidence that closes the
+   ticket. Buried in the event table, nobody would find it. */
+.restoration-proof { margin: .6rem 0; padding: .6rem .8rem; background: #e9f7ef;
+  border: 1px solid #9ed4b4; border-left: 5px solid #1f9e57; border-radius: .35rem; font-size: .84rem; }
+.restoration-proof ul { margin: .35rem 0; padding-left: 1.1rem; }
+.restoration-proof li { margin: .1rem 0; }
+.restoration-proof code { font-size: .78rem; background: #fff; padding: 0 .25rem; border-radius: .2rem; }
+.restoration-proof p { margin: .2rem 0 0; color: #14663a; font-weight: 700; }
+tr.event-restored td { background: #f2fbf5; }
+
 /* Live counts, so an all-grey grid reads as "nothing has reported" rather than
    as a map that failed to load. */
 .network-summary { position: absolute; z-index: 500; left: .6rem; top: .6rem; display: flex; flex-wrap: wrap;

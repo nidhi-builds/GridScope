@@ -21,6 +21,11 @@ services:
       APP_ENV: development
       LOG_LEVEL: INFO
       SEED: "true"
+      # Open on a live network rather than a grey one, and keep it live with
+      # routine heartbeats. Both are off by default for the test suites, which
+      # are written against a network that has reported nothing.
+      SEED_BASELINE_LIVE: "true"
+      HEARTBEAT_SWEEP_SECONDS: "30"
     depends_on:
       db:
         condition: service_healthy

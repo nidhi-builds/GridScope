@@ -96,6 +96,31 @@ describe("simulator demo view", () => {
     expect(await screen.findByLabelText("Selected incident ticket")).toBeTruthy();
   });
 
+  it("names the poles that reported power back, as the evidence that closes the ticket", async () => {
+    const restored = {
+      items: [
+        ...events.items,
+        { id: "E-4", device_id: "D-1", pole_id: "P-2", event_type: "power_restored", device_time: "2026-08-05T10:01:00Z", received_at: "2026-08-05T10:01:02Z", processing_state: "processed", epoch_decision: "in_order" },
+        { id: "E-5", device_id: "D-2", pole_id: "P-3", event_type: "power_restored", device_time: "2026-08-05T10:01:01Z", received_at: "2026-08-05T10:01:03Z", processing_state: "processed", epoch_decision: "in_order" },
+      ],
+      page: 1, page_size: 100, total: 5,
+    };
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => ({
+      ok: true, status: 200,
+      json: async () => String(url).includes("/simulator/scenarios") ? scenarios
+        : String(url).includes("/events") ? restored
+          : String(url).includes("/api/v1/incidents/") ? incidentDetail : run,
+    }) as Response);
+
+    await start();
+
+    const proof = await screen.findByLabelText("Restoration telemetry");
+    expect(within(proof).getByText("2 poles reported power back after the repair")).toBeTruthy();
+    expect(within(proof).getByText("P-2")).toBeTruthy();
+    expect(within(proof).getByText("P-3")).toBeTruthy();
+    expect(within(proof).getByText(/closes on these events, not on the crew's report/)).toBeTruthy();
+  });
+
   it("streams generated events with their delivery outcome and keeps ground truth demo-only", async () => {
     mockApi();
     await start();
